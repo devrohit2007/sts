@@ -26,6 +26,7 @@ const store = new RoomStore({ maxParticipants: 8 });
 const config = publicConfig(env, { googleSignIn: !!verifyIdToken });
 
 const app = express();
+const origins = (env.CORS_ORIGIN || '').split(',').map((s) => s.trim()).filter(Boolean);
 app.disable('x-powered-by');
 app.use((req, res, next) => {
   res.set({
@@ -33,6 +34,25 @@ app.use((req, res, next) => {
     'Referrer-Policy': 'strict-origin-when-cross-origin',
     'Permissions-Policy': 'camera=(self), microphone=(self), geolocation=()',
   });
+  next();
+});
+
+// CORS for the Vercel frontend's requests to Express.
+app.use((req, res, next) => {
+  const origin = req.headers.origin;
+
+  if (origin && origins.includes(origin)) {
+    res.setHeader('Access-Control-Allow-Origin', origin);
+    res.setHeader('Vary', 'Origin');
+    res.setHeader('Access-Control-Allow-Methods', 'GET, POST, OPTIONS');
+    res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization');
+  }
+
+  if (req.method === 'OPTIONS') {
+    if (origin && !origins.includes(origin)) return res.sendStatus(403);
+    return res.sendStatus(204);
+  }
+
   next();
 });
 
@@ -48,7 +68,7 @@ app.get('/config', (req, res) => {
 app.use(express.static(path.join(__dirname, 'public')));
 
 const server = http.createServer(app);
-const origins = (env.CORS_ORIGIN || '').split(',').map((s) => s.trim()).filter(Boolean);
+
 const io = new Server(server, {
   cors: origins.length ? { origin: origins } : undefined, // same-origin only unless CORS_ORIGIN is set
   pingInterval: 10000,
