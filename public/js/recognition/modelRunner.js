@@ -68,3 +68,72 @@ export async function loadModel(dir, { fetchFn = globalThis.fetch, ortLoader = l
     },
   };
 }
+
+
+// ASLNow! static fingerspelling model. Input is one MediaPipe hand: [1, 21, 3].
+// This is deliberately separate from the project's temporal ONNX sign-model path.
+const ASLNOW_LABELS = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ'.split('').map((letter) => ({
+  gloss: letter, meaning: letter,
+}));
+let tfLoading;
+async function loadTensorFlow() {
+  if (!globalThis.tf) {
+    if (!tfLoading) tfLoading = import('https://cdn.jsdelivr.net/npm/@tensorflow/tfjs@4.22.0/+esm')
+      .then((mod) => { globalThis.tf = mod; return mod; })
+      .catch((err) => { tfLoading = null; throw err; });
+  }
+  return globalThis.tf || tfLoading;
+}
+
+export async function findAslNowModel(dir = '/models/asl', fetchFn = globalThis.fetch) {
+  try {
+    const [json, bin] = await Promise.all([
+      fetchFn(dir + '/model.json', { method: 'HEAD', cache: 'no-store' }),
+      fetchFn(dir + '/group1-shard1of1.bin', { method: 'HEAD', cache: 'no-store' }),
+    ]);
+    if (!json.ok || !bin.ok) return null;
+    return { meta: { labels: ASLNOW_LABELS, threshold: 0.65 }, metrics: null };
+  } catch (e) { return null; }
+}
+
+export async function loadAslNowModel(dir = '/models/asl') {
+  const tf = await loadTensorFlow();
+  const model = await tf.loadLayersModel(dir + '/model.json');
+  const shape = model.inputs?.[0]?.shape;
+  if (!shape || shape.length !== 3 || shape[1] !== 21 || shape[2] !== 3) {
+    model.dispose();
+    throw new Error('ASLNow model input must be [batch, 21, 3]');
+  }
+  if (model.outputs?.[0]?.shape?.at(-1) !== 26) {
+    model.dispose();
+    throw new Error('ASLNow model must return 26 letter scores');
+  }
+  return {
+    kind: 'aslnow', labels: ASLNOW_LABELS, threshold: 0.65,
+    async predictLandmarks(landmarks) {
+      if (!Array.isArray(landmarks) || landmarks.length !== 21) throw new Error('Expected 21 hand landmarks');
+      const values = new Float32Array(63);
+      landmarks.forEach((point, i) => {
+        values[i * 3] = point.x;
+        values[i * 3 + 1] = point.y;
+        values[i * 3 + 2] = point.z;
+      });
+      const input = tf.tensor3d(values, [1, 21, 3]);
+      let output;
+      try {
+        output = model.predict(input);
+        const scores = await output.data();
+        // Model has a linear output layer; convert logits to probabilities.
+        const max = Math.max(...scores);
+        const exps = Array.from(scores, (v) => Math.exp(v - max));
+        const total = exps.reduce((a, b) => a + b, 0);
+        return exps.map((v) => v / total);
+      } finally {
+        input.dispose();
+        if (Array.isArray(output)) output.forEach((t) => t.dispose());
+        else output?.dispose();
+      }
+    },
+    dispose() { model.dispose(); },
+  };
+}

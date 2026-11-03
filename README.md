@@ -1,105 +1,284 @@
-# STS - Sign To Speech
+# STS --- Sign To Speech
 
-Video calls where a signer's hand signs become live captions and voice, and a hearing person's speech becomes captions for the signer.
+**STS (Sign To Speech)** is a real-time communication web app prototype
+designed to make conversations easier between people who communicate
+through gestures, speech, and text.
 
-- `/` video calls: Google or guest sign-in, rooms of up to 8 people, live captions, quick phrases, chat, transcript
-- `/translate.html` sign translator: camera, hand landmarks, editable text, speech
+> **Prototype note:** The current gesture feature recognizes a limited
+> set of supported gestures. It is not a complete Indian Sign Language
+> (ISL) or American Sign Language (ASL) translation system.
 
-## Honest status
+## Live Demo
 
-| Feature | Status |
-|---|---|
-| Video/audio calls (WebRTC mesh, max 8) | Implemented, browser-tested with 3 people (see Testing) |
-| Google sign-in (Firebase) and guest access | Implemented. Google sign-in has NOT been tested against real Firebase |
-| Live captions from speech (browser speech recognition) | Implemented. Not tested in a real browser |
-| Quick phrases, chat, transcript, adjustable caption size | Implemented, browser-tested |
-| Sign keywords to sentence with NVIDIA Nemotron | Implemented. Tested with a mocked API only. Falls back to plain words |
-| Sign detection | **Demo only**: 7 generic hand shapes from MediaPipe, mapped to words. Not real ISL or ASL |
-| Trained ISL / ASL model | **Not implemented.** See `model-research/README.md` |
-| Continuous sign recognition | **Not implemented** |
+-   **Web app:** https://sts-virid-phi.vercel.app
+-   **Backend:** https://sts-server-w1ps.onrender.com
+-   **Health check:** https://sts-server-w1ps.onrender.com/health
 
-## Run locally
+The backend may take extra time to respond after inactivity when using a
+free hosting instance.
 
+## Features
+
+-   Create and join communication rooms.
+-   Browser-based audio/video calls using WebRTC.
+-   Gesture-recognition demo for a limited set of implemented gestures.
+-   Speech-to-text captions where supported by the browser.
+-   Text-to-speech using browser speech synthesis.
+-   Live text chat and quick phrases.
+-   Optional AI-assisted text refinement through the configured NVIDIA
+    API.
+-   Google sign-in and guest access, depending on the enabled
+    authentication configuration.
+-   Responsive interface for supported desktop and mobile browsers.
+
+Feature availability varies by browser, device permissions, lighting,
+and network quality.
+
+## How It Works
+
+  -----------------------------------------------------------------------
+  Component               Service                 Responsibility
+  ----------------------- ----------------------- -----------------------
+  Frontend                Vercel                  Hosts the static web
+                                                  interface
+
+  Backend                 Render                  Runs the
+                                                  Node.js/Express server
+                                                  and Socket.IO signaling
+
+  Authentication          Firebase Authentication Handles Google
+                                                  authentication
+
+  AI text refinement      NVIDIA API              Optional
+                                                  text-refinement
+                                                  capability
+
+  Real-time media         WebRTC                  Carries audio/video
+                                                  when network conditions
+                                                  allow
+  -----------------------------------------------------------------------
+
+Socket.IO handles room communication and WebRTC signaling. Audio/video
+media is handled by WebRTC; depending on network conditions, media may
+travel peer-to-peer or through a configured TURN relay.
+
+## Tech Stack
+
+-   HTML, CSS, JavaScript
+-   Node.js and Express
+-   Socket.IO
+-   WebRTC
+-   Firebase Authentication and Firebase Admin token verification
+-   NVIDIA API (optional AI text refinement)
+-   Browser camera, microphone, speech-recognition, and speech-synthesis
+    APIs
+-   Gesture-recognition components included in the project
+
+## Run Locally
+
+### Requirements
+
+-   Node.js and npm
+-   A Firebase project to test Google sign-in
+-   An NVIDIA API key to use AI text refinement
+
+### 1. Clone the repository
+
+``` bash
+git clone https://github.com/devrohit2007/sts.git
+cd sts
 ```
+
+### 2. Install dependencies
+
+``` bash
 npm install
-npm start          # http://localhost:3000
 ```
 
-Camera access needs HTTPS or `localhost`.
+### 3. Configure environment variables
 
-## Firebase (Google sign-in)
+Set environment variables in your local environment or hosting
+dashboard. Create a local `.env` file only if the current project setup
+loads it.
 
-The project is `secret-keeper-8`; its public web config is built in. To use another project set `FIREBASE_WEB_CONFIG`.
+  -----------------------------------------------------------------------
+  Variable                            Purpose
+  ----------------------------------- -----------------------------------
+  `PORT`                              Server port; hosting providers
+                                      usually supply this automatically
 
-1. Firebase console, Authentication, Sign-in method: enable **Google**.
-2. Authentication, Settings, **Authorized domains**: add your Render domain, e.g. `sts.onrender.com`. Without this Google sign-in shows "This website is not authorised in Firebase yet".
-3. Nothing else is needed on the server. Verifying ID tokens only needs the project id. `FIREBASE_SERVICE_ACCOUNT` is optional.
+  `CORS_ORIGIN`                       Comma-separated list of trusted
+                                      frontend origins
 
-The server verifies every Google ID token with the Firebase Admin SDK before a socket may create or join rooms. Guests get a random temporary id; nothing is stored.
+  `NVIDIA_API_KEY`                    Secret key for the optional NVIDIA
+                                      integration
 
-## Deploy on Render
+  `NVIDIA_MODEL`                      Optional model identifier; the
+                                      server has a default
 
-1. Push this folder to GitHub.
-2. Render, New, **Web Service**, pick the repo.
-3. Settings: Runtime **Node**, Build `npm install`, Start `npm start`, Health Check Path `/health`.
-4. Add environment variables (below), then deploy. Later pushes redeploy automatically.
+  Firebase Admin settings             Credentials/configuration used by
+                                      `lib/firebaseAdmin.js`
 
-| Variable | Required | Purpose |
-|---|---|---|
-| `NVIDIA_API_KEY` | for AI sentences | Key from build.nvidia.com. Without it captions show the plain keywords |
-| `NVIDIA_MODEL` | no | Default `nvidia/nemotron-3-ultra-550b-a55b` |
-| `FIREBASE_PROJECT_ID` | no | Default `secret-keeper-8` |
-| `FIREBASE_WEB_CONFIG` | no | JSON of a Firebase web config, to use a different project |
-| `FIREBASE_SERVICE_ACCOUNT` | no | Service account JSON (optional) |
-| `STUN_URLS` | no | Comma list, default Google STUN |
-| `TURN_URLS`, `TURN_USERNAME`, `TURN_CREDENTIAL` | recommended | Your own TURN server for calls across strict networks |
-| `PUBLIC_TURN` | no | Set `off` to disable the free public TURN relay (used only when `TURN_URLS` is empty; best effort) |
-| `CORS_ORIGIN` | no | Only if the frontend is hosted on another domain |
+  Firebase public settings            Browser configuration defined by
+                                      `lib/config.js`
+  -----------------------------------------------------------------------
 
-TURN credentials are sent to every browser by design; use a TURN account meant for that. Never put the NVIDIA key or a service account in frontend code: they are only read by the server.
+Check `lib/config.js` and `lib/firebaseAdmin.js` for the exact Firebase
+variable names expected by this version. Do not guess variable names or
+commit credentials.
 
-### Cold starts
+The frontend backend URL is configured in `public/index.html` using the
+`sts-api` meta tag. The current production value is:
 
-`/health` is called as soon as the page opens, before any sign-in, and retried until the server answers (up to 90 s). While it waits a "Starting the server" screen shows. Everything else (config, Socket.IO, Firebase) starts only after the server is reachable, and the same Socket.IO connection is reused for sign-in and all rooms. `/health` does not touch NVIDIA or Firebase.
-
-Because the web app and server are one Render service, Render itself shows its own waiting page before STS loads on a cold start. The STS wake screen covers restarts and dropped servers while the page is open. To host the frontend elsewhere, set `<meta name="sts-api" content="https://your-server.onrender.com">` in `public/index.html` and `CORS_ORIGIN` on the server.
-
-## Testing
-
-```
-npm test            # 58 unit tests, no network
-npm run test:e2e    # 21 browser tests (needs: npm i -g playwright && npx playwright install chromium)
+``` html
+<meta name="sts-api" content="https://sts-server-w1ps.onrender.com">
 ```
 
-Unit tests cover: input validation, rate limits, room store and the 8-person limit, guest and Google authentication (with a fake verifier), every Socket.IO event, signaling isolation between rooms, AI validation and fallback, ICE/env configuration, cold-start polling, speech-caption restarts, sign hold logic.
+### 4. Start the server
 
-The end-to-end test drives real Chromium with real WebRTC between separate browser contexts, running the real client code and the real server event handlers. It covers: cold start screen, guest and Google flow, invalid room codes, create/join/leave/rejoin, video both ways, 3-person group call, mic/camera state, quick phrases, sign captions, AI replacement, chat, caption size, back button, network drop and automatic rejoin, translator page, mobile layout, no console errors.
+Check `package.json` for the available scripts. If a `start` script
+exists, run:
 
-**Not tested** (stand-ins were used, or it needs real services):
-- Real Socket.IO networking and `server.js` itself (packages could not be installed in the build sandbox, so the first deploy is the first run of that file)
-- Real Google sign-in and Firebase token verification
-- Real NVIDIA responses (mocked)
-- Render cold starts
-- Real MediaPipe model and real cameras on phones
-- Browser speech recognition and speech synthesis
-- Calls across different networks (TURN)
-- Camera flip on a real phone
-
-## Known limitations
-
-- Sign detection is a 7-gesture demo, not ISL/ASL.
-- Mesh calls get heavy past about 4-5 people on phones.
-- On some Android browsers, speech-to-text captions may compete with the call microphone.
-- Google ID tokens are verified when you sign in, not again during a long session.
-- Free Render sleeps when idle and keeps rooms in memory: a restart ends all rooms.
-
-## Layout
-
+``` bash
+npm start
 ```
-server.js            Express + Socket.IO wiring
-lib/                 handlers, rooms, auth, AI, config, validation, rate limits
-public/index.html    call app           public/js/call/   call modules
-public/translate.html translator        public/js/        shared modules
-model-research/      model and licence research
-test/                unit and end-to-end tests
+
+Otherwise, start the entry point directly:
+
+``` bash
+node server.js
 ```
+
+Open the local address printed by the server, commonly
+`http://localhost:3000`.
+
+Camera and microphone access generally require HTTPS or localhost, plus
+browser permission.
+
+## Deployment
+
+### Backend --- Render
+
+1.  Connect this GitHub repository to a Render Web Service.
+2.  Select the `main` branch and Node environment.
+3.  Set the build command to `npm install`.
+4.  Set the start command to the script in `package.json` (commonly
+    `npm start`).
+5.  Add the required environment variables in Render's Environment
+    settings.
+6.  Set `CORS_ORIGIN` to the exact frontend origin:
+
+``` text
+https://sts-virid-phi.vercel.app
+```
+
+For multiple trusted frontend domains, separate origins with commas. Do
+not add a trailing slash.
+
+7.  Deploy and verify:
+
+``` text
+https://sts-server-w1ps.onrender.com/health
+```
+
+### Frontend --- Vercel
+
+1.  Import the same GitHub repository into Vercel.
+2.  Use the `Other` framework preset if no framework is detected.
+3.  Set the output directory to `public`.
+4.  Ensure the `sts-api` meta tag points to the Render backend.
+5.  Add the Vercel domain to Firebase Authentication → Settings →
+    Authorized domains.
+6.  Deploy the frontend.
+
+If the frontend domain changes, update both Firebase Authorized domains
+and Render's `CORS_ORIGIN` allowlist.
+
+## ASL Recognition (50 to 100 signs)
+
+**Status: the engine is built and tested; no trained ASL model is included.** Until you train and add one, the Translator runs in demo mode (7 basic hand shapes, not real ASL).
+
+-   Target vocabulary: 50 core + 50 extended ASL signs (`public/js/recognition/aslVocabulary.js`).
+-   Pipeline: MediaPipe hand landmarks, then a small sequence model (ONNX) run in the browser with ONNX Runtime Web.
+-   The Translator shows camera preview, hand status, recognised sign, English meaning, confidence, and "Unknown or unsupported sign". Signs below 70% confidence, or too close to the runner-up, are never translated. A cooldown stops repeated words.
+-   Training code: `training/` (signer-disjoint split, test set used once). Read `training/README.md`, including the dataset licence warning.
+-   Accuracy is shown only from a real `metrics.json` produced by that training run.
+
+## Security Notes
+
+-   Never commit `.env` files, API keys, Firebase service-account JSON
+    files, private keys, or TURN passwords.
+-   Keep `NVIDIA_API_KEY` and Firebase Admin credentials in Render's
+    Environment settings.
+-   Do not expose permanent TURN credentials in a public configuration
+    endpoint. Prefer a TURN provider that issues short-lived
+    credentials.
+-   A Firebase browser API key and project ID are client configuration;
+    they do not replace Firebase Security Rules or authentication.
+-   Restrict database rules to the access the application actually
+    needs.
+-   Configure CORS with only trusted frontend origins. CORS is not an
+    authentication mechanism.
+-   If a secret has been exposed publicly, rotate it with its provider.
+    Removing it from source code alone is not enough.
+
+## Browser and Network Notes
+
+-   Users must grant camera and microphone permissions.
+-   Speech recognition and speech synthesis support differs between
+    browsers.
+-   WebRTC calls require a stable network and may need correctly
+    configured STUN/TURN servers on restrictive networks.
+-   A free Render instance may sleep after inactivity, so the first
+    backend request can take longer while the service wakes up.
+-   Vercel can serve the frontend while Render is waking, but
+    backend-dependent features must wait for the backend.
+
+## Current Scope and Limitations
+
+STS is a hackathon prototype, not a certified accessibility or
+sign-language interpretation product.
+
+-   Without a trained model, gesture recognition covers only 7 basic demo
+    shapes. A trained ASL model must be added (see ASL Recognition).
+-   Accuracy can vary with lighting, camera quality, hand position, and
+    movement.
+-   Browser speech features are not supported identically across
+    browsers and languages.
+-   Call quality depends on device capability, network conditions, and
+    relay configuration.
+-   Do not rely on this prototype for emergency, medical, legal, or
+    other high-stakes communication.
+
+## Project Structure
+
+-   `public/` --- frontend pages, styles, and browser-side JavaScript
+-   `lib/` --- server-side authentication, configuration, rooms, AI,
+    validation, and event logic
+-   `server.js` --- Express and Socket.IO server entry point
+-   `test/` --- automated tests
+-   `package.json` --- Node.js dependencies and scripts
+
+Refer to the source files for the exact implementation and configuration
+expected by the current version.
+
+## Contributing
+
+This project is a hackathon prototype. Suggestions, bug reports, and
+improvements are welcome.
+
+1.  Explain the issue or proposed improvement.
+2.  Keep changes focused and do not include secrets.
+3.  Test affected features where possible.
+4.  Be clear about what has and has not been tested.
+
+## Acknowledgements
+
+Built with open web technologies and services including Node.js,
+Express, Socket.IO, WebRTC, Firebase, and NVIDIA API services.
+
+------------------------------------------------------------------------
+
+**STS --- Sign To Speech**\
+*Making conversations more accessible through gestures, speech, and
+text.*

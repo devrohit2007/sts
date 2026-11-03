@@ -15,13 +15,11 @@ export const MODELS = {
     note: 'Planned: train on INCLUDE-50 (CC BY 4.0), then export to ONNX.',
   },
   asl: {
-    name: 'American Sign Language (ASL)',
-    status: 'planned',
+    name: 'American Sign Language (ASL) fingerspelling',
+    status: 'pretrained-static-letters',
     dir: '/models/asl',
-    file: '/models/asl/model.onnx',
-    labelsFile: '/models/asl/labels.json',
-    threshold: 0.7,
-    note: 'Target: 100 ASL signs (50 core). No model is shipped. Train one with training/ on a dataset you are licensed to use, then add it under public/models/asl/.',
+    threshold: 0.65,
+    note: 'Pretrained ASLNow! model recognises static fingerspelled letters A–Z. J and Z require movement and are not supported by this static model.',
   },
 };
 

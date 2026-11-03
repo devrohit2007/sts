@@ -2,7 +2,7 @@
 import { startCamera, stopCamera, explainCameraError } from './camera.js';
 import { drawHands, clearHands } from './vision/mediapipe.js';
 import { MODELS, STARTER } from './recognition/modelRegistry.js';
-import { findModel, loadModel } from './recognition/modelRunner.js';
+import { findModel, loadModel, findAslNowModel, loadAslNowModel } from './recognition/modelRunner.js';
 import { createSignDetector } from './recognition/signDetector.js';
 import { appendWord, finishSentence } from './languages/sentenceBuilder.js';
 import { $, toast } from './ui.js';
@@ -20,15 +20,15 @@ function chip(id, text, on) { const c = $(id); c.textContent = text; c.dataset.o
 
 async function paintEngine() {
   const seq = ++paintSeq; const m = MODELS[lang];
-  const f = m.dir ? await findModel(m.dir) : null;
+  const f = lang === 'asl' ? await findAslNowModel(m.dir) : (m.dir ? await findModel(m.dir) : null);
   if (seq !== paintSeq) return;
   found = f; model = null;
   if (f) {
     const n = f.meta.labels.length; const mt = f.metrics;
     $('engineName').textContent = `${m.name}: ${n}-sign model installed`;
-    $('engineMsg').textContent = mt
-      ? ` Held-out test result from the training run: top-1 ${(mt.top1 * 100).toFixed(1)}% on ${mt.clips} clips from signers not used in training (${mt.dataset}). Real-world accuracy will be lower.`
-      : ' No evaluation report is installed, so accuracy is unknown.';
+    $('engineMsg').textContent = lang === 'asl'
+      ? ' Pretrained ASLNow! static fingerspelling model: A–Z. J and Z require movement and are not recognised by this static model. Accuracy has not been independently tested in STS.'
+      : (mt ? ` Held-out test result from the training run: top-1 ${(mt.top1 * 100).toFixed(1)}% on ${mt.clips} clips from signers not used in training (${mt.dataset}). Real-world accuracy will be lower.` : ' No evaluation report is installed, so accuracy is unknown.');
     chip('chipEngine', `${lang.toUpperCase()} model, ${n} signs`, true);
   } else {
     $('engineName').textContent = STARTER.name;
@@ -81,7 +81,7 @@ const detector = createSignDetector({
   onFrame: (r, v) => { drawHands(canvas, v, r); showHands(r); },
   onPrediction: showPrediction,
   onWord: (word) => {
-    out.value = appendWord(out.value, word);
+    out.value = model?.kind === 'aslnow' ? (out.value + word) : appendWord(out.value, word);
     clearTimeout(idleT); idleT = setTimeout(() => { out.value = finishSentence(out.value); }, 2500);
   },
 });
@@ -103,7 +103,7 @@ async function start() {
   running = true; paintRunning(); chip('chipCam', 'Camera on', true);
   if (found) {
     setStatus(`Loading ${lang.toUpperCase()} sign model...`, 'wait');
-    try { model = await loadModel(MODELS[lang].dir, { meta: found.meta }); } catch (e) {
+    try { model = lang === 'asl' ? await loadAslNowModel(MODELS[lang].dir) : await loadModel(MODELS[lang].dir, { meta: found.meta }); } catch (e) {
       console.error(e); model = null; chip('chipEngine', 'Model failed: demo gestures', 'warn');
       toast(`Could not load the ${lang.toUpperCase()} model. Using demo gestures instead.`, 5000);
     }

@@ -43,10 +43,21 @@ test('classify separates no hand, uncertain and confident signs', async () => {
   assert.ok(Object.keys(STARTER.labels).length === 7);
 });
 
-test('model registry never claims a trained model exists', async () => {
+test('model registry distinguishes the installed ASL fingerspelling model from planned ISL', async () => {
   const { MODELS, STARTER } = await load('recognition/modelRegistry.js');
-  for (const m of Object.values(MODELS)) assert.equal(m.status, 'planned');
+  assert.equal(MODELS.isl.status, 'planned');
+  assert.equal(MODELS.asl.status, 'pretrained-static-letters');
   assert.equal(STARTER.status, 'demo');
+});
+
+test('ASLNow model discovery requires both TensorFlow.js files', async () => {
+  const { findAslNowModel } = await load('recognition/modelRunner.js');
+  const fetchFn = async (url) => ({ ok: !url.endsWith('missing.bin') });
+  const found = await findAslNowModel('/models/asl', fetchFn);
+  assert.equal(found.meta.labels.length, 26);
+  assert.equal(found.meta.labels[0].gloss, 'A');
+  const missing = await findAslNowModel('/models/asl', async (url) => ({ ok: !url.endsWith('group1-shard1of1.bin') }));
+  assert.equal(missing, null);
 });
 
 test('sentence builder only joins recognised words', async () => {

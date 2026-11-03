@@ -53,6 +53,21 @@ export function createSignDetector({ getVideo, getModel = () => null, onFrame, o
     try { result = vision.recognizer.recognizeForVideo(video, t); } catch (e) { return; }
     onFrame?.(result, video);
     const model = getModel();
+    if (model?.kind === 'aslnow') {
+      const hand = result?.landmarks?.[0];
+      if (!hand) { tracker.miss(true); onPrediction?.({ state: 'nohand' }); return; }
+      if (inferring) return;
+      inferring = true;
+      Promise.resolve(model.predictLandmarks(hand)).then((scores) => {
+        if (!running) return;
+        const d = decide(scores, model.labels, { minConf: model.threshold, minMargin: 0.10 });
+        onPrediction?.(d);
+        if (d.state === 'sign') { const w = tracker.sign(d.word); if (w) onWord?.(w, d); }
+        else tracker.miss(false);
+      }).catch((e) => { console.error(e); onPrediction?.({ state: 'error' }); })
+        .finally(() => { inferring = false; });
+      return;
+    }
     if (model) return modelFrame(model, result);
     const p = classify(result);
     onPrediction?.(p);
