@@ -1,0 +1,402 @@
+[
+ {
+  "gloss": "HELLO",
+  "meaning": "Hello"
+ },
+ {
+  "gloss": "GOODBYE",
+  "meaning": "Goodbye"
+ },
+ {
+  "gloss": "PLEASE",
+  "meaning": "Please"
+ },
+ {
+  "gloss": "THANK-YOU",
+  "meaning": "Thank you"
+ },
+ {
+  "gloss": "SORRY",
+  "meaning": "Sorry"
+ },
+ {
+  "gloss": "YES",
+  "meaning": "Yes"
+ },
+ {
+  "gloss": "NO",
+  "meaning": "No"
+ },
+ {
+  "gloss": "HELP",
+  "meaning": "Help"
+ },
+ {
+  "gloss": "STOP",
+  "meaning": "Stop"
+ },
+ {
+  "gloss": "WAIT",
+  "meaning": "Wait"
+ },
+ {
+  "gloss": "WANT",
+  "meaning": "Want"
+ },
+ {
+  "gloss": "NEED",
+  "meaning": "Need"
+ },
+ {
+  "gloss": "LIKE",
+  "meaning": "Like"
+ },
+ {
+  "gloss": "LOVE",
+  "meaning": "Love"
+ },
+ {
+  "gloss": "EAT",
+  "meaning": "Eat"
+ },
+ {
+  "gloss": "DRINK",
+  "meaning": "Drink"
+ },
+ {
+  "gloss": "WATER",
+  "meaning": "Water"
+ },
+ {
+  "gloss": "FOOD",
+  "meaning": "Food"
+ },
+ {
+  "gloss": "MORE",
+  "meaning": "More"
+ },
+ {
+  "gloss": "FINISH",
+  "meaning": "Finished"
+ },
+ {
+  "gloss": "GOOD",
+  "meaning": "Good"
+ },
+ {
+  "gloss": "BAD",
+  "meaning": "Bad"
+ },
+ {
+  "gloss": "HAPPY",
+  "meaning": "Happy"
+ },
+ {
+  "gloss": "SAD",
+  "meaning": "Sad"
+ },
+ {
+  "gloss": "MOTHER",
+  "meaning": "Mother"
+ },
+ {
+  "gloss": "FATHER",
+  "meaning": "Father"
+ },
+ {
+  "gloss": "FAMILY",
+  "meaning": "Family"
+ },
+ {
+  "gloss": "FRIEND",
+  "meaning": "Friend"
+ },
+ {
+  "gloss": "NAME",
+  "meaning": "Name"
+ },
+ {
+  "gloss": "HOME",
+  "meaning": "Home"
+ },
+ {
+  "gloss": "SCHOOL",
+  "meaning": "School"
+ },
+ {
+  "gloss": "WORK",
+  "meaning": "Work"
+ },
+ {
+  "gloss": "BATHROOM",
+  "meaning": "Bathroom"
+ },
+ {
+  "gloss": "DOCTOR",
+  "meaning": "Doctor"
+ },
+ {
+  "gloss": "SICK",
+  "meaning": "Sick"
+ },
+ {
+  "gloss": "HURT",
+  "meaning": "Hurt or pain"
+ },
+ {
+  "gloss": "MEDICINE",
+  "meaning": "Medicine"
+ },
+ {
+  "gloss": "HOSPITAL",
+  "meaning": "Hospital"
+ },
+ {
+  "gloss": "UNDERSTAND",
+  "meaning": "I understand"
+ },
+ {
+  "gloss": "KNOW",
+  "meaning": "Know"
+ },
+ {
+  "gloss": "AGAIN",
+  "meaning": "Again"
+ },
+ {
+  "gloss": "SLOW",
+  "meaning": "Slow"
+ },
+ {
+  "gloss": "WHERE",
+  "meaning": "Where"
+ },
+ {
+  "gloss": "WHAT",
+  "meaning": "What"
+ },
+ {
+  "gloss": "WHO",
+  "meaning": "Who"
+ },
+ {
+  "gloss": "WHEN",
+  "meaning": "When"
+ },
+ {
+  "gloss": "WHY",
+  "meaning": "Why"
+ },
+ {
+  "gloss": "HOW",
+  "meaning": "How"
+ },
+ {
+  "gloss": "ME",
+  "meaning": "I or me"
+ },
+ {
+  "gloss": "YOU",
+  "meaning": "You"
+ },
+ {
+  "gloss": "LEARN",
+  "meaning": "Learn"
+ },
+ {
+  "gloss": "SLEEP",
+  "meaning": "Sleep"
+ },
+ {
+  "gloss": "TIRED",
+  "meaning": "Tired"
+ },
+ {
+  "gloss": "HUNGRY",
+  "meaning": "Hungry"
+ },
+ {
+  "gloss": "THIRSTY",
+  "meaning": "Thirsty"
+ },
+ {
+  "gloss": "COLD",
+  "meaning": "Cold"
+ },
+ {
+  "gloss": "HOT",
+  "meaning": "Hot"
+ },
+ {
+  "gloss": "ANGRY",
+  "meaning": "Angry"
+ },
+ {
+  "gloss": "SCARED",
+  "meaning": "Scared"
+ },
+ {
+  "gloss": "EXCITED",
+  "meaning": "Excited"
+ },
+ {
+  "gloss": "SISTER",
+  "meaning": "Sister"
+ },
+ {
+  "gloss": "BROTHER",
+  "meaning": "Brother"
+ },
+ {
+  "gloss": "BABY",
+  "meaning": "Baby"
+ },
+ {
+  "gloss": "BOY",
+  "meaning": "Boy"
+ },
+ {
+  "gloss": "GIRL",
+  "meaning": "Girl"
+ },
+ {
+  "gloss": "MAN",
+  "meaning": "Man"
+ },
+ {
+  "gloss": "WOMAN",
+  "meaning": "Woman"
+ },
+ {
+  "gloss": "TEACHER",
+  "meaning": "Teacher"
+ },
+ {
+  "gloss": "STUDENT",
+  "meaning": "Student"
+ },
+ {
+  "gloss": "BOOK",
+  "meaning": "Book"
+ },
+ {
+  "gloss": "PHONE",
+  "meaning": "Phone"
+ },
+ {
+  "gloss": "COMPUTER",
+  "meaning": "Computer"
+ },
+ {
+  "gloss": "CAR",
+  "meaning": "Car"
+ },
+ {
+  "gloss": "BUS",
+  "meaning": "Bus"
+ },
+ {
+  "gloss": "MONEY",
+  "meaning": "Money"
+ },
+ {
+  "gloss": "BUY",
+  "meaning": "Buy"
+ },
+ {
+  "gloss": "TODAY",
+  "meaning": "Today"
+ },
+ {
+  "gloss": "TOMORROW",
+  "meaning": "Tomorrow"
+ },
+ {
+  "gloss": "YESTERDAY",
+  "meaning": "Yesterday"
+ },
+ {
+  "gloss": "NOW",
+  "meaning": "Now"
+ },
+ {
+  "gloss": "LATER",
+  "meaning": "Later"
+ },
+ {
+  "gloss": "MORNING",
+  "meaning": "Morning"
+ },
+ {
+  "gloss": "NIGHT",
+  "meaning": "Night"
+ },
+ {
+  "gloss": "TIME",
+  "meaning": "Time"
+ },
+ {
+  "gloss": "COME",
+  "meaning": "Come"
+ },
+ {
+  "gloss": "GO",
+  "meaning": "Go"
+ },
+ {
+  "gloss": "GIVE",
+  "meaning": "Give"
+ },
+ {
+  "gloss": "SEE",
+  "meaning": "See"
+ },
+ {
+  "gloss": "LOOK",
+  "meaning": "Look"
+ },
+ {
+  "gloss": "HEAR",
+  "meaning": "Hear"
+ },
+ {
+  "gloss": "SAY",
+  "meaning": "Say"
+ },
+ {
+  "gloss": "READ",
+  "meaning": "Read"
+ },
+ {
+  "gloss": "WRITE",
+  "meaning": "Write"
+ },
+ {
+  "gloss": "PLAY",
+  "meaning": "Play"
+ },
+ {
+  "gloss": "WALK",
+  "meaning": "Walk"
+ },
+ {
+  "gloss": "RUN",
+  "meaning": "Run"
+ },
+ {
+  "gloss": "SIT",
+  "meaning": "Sit"
+ },
+ {
+  "gloss": "STAND",
+  "meaning": "Stand"
+ },
+ {
+  "gloss": "OPEN",
+  "meaning": "Open"
+ },
+ {
+  "gloss": "CLOSE",
+  "meaning": "Close"
+ }
+]

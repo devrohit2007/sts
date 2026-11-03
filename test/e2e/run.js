@@ -81,6 +81,9 @@ const server = http.createServer((req, res) => {
   const file = path.normalize(path.join(PUBLIC, rel));
   if (!file.startsWith(PUBLIC) || !fs.existsSync(file) || fs.statSync(file).isDirectory()) { res.writeHead(404); return res.end('not found'); }
   res.writeHead(200, { 'content-type': MIME[path.extname(file)] || 'application/octet-stream' });
+  if (path.extname(file) === '.html') { // production points sts-api at Render; the test talks to this server instead
+    return res.end(fs.readFileSync(file, 'utf8').replace(/(<meta name="sts-api" content=")[^"]*"/, '$1"'));
+  }
   fs.createReadStream(file).pipe(res);
 });
 
@@ -351,9 +354,43 @@ const remoteVideoPlaying = (page) => page.waitForFunction(
     await c.page.evaluate(() => { window.__gesture = 'Victory'; });
     await c.page.waitForFunction(() => document.getElementById('out').value.includes('Thank you'), null, { timeout: T });
     await c.page.evaluate(() => { window.__gesture = 'None'; });
-    await c.page.waitForFunction(() => document.getElementById('predWord').textContent === 'Uncertain sign', null, { timeout: T });
+    await c.page.waitForFunction(() => document.getElementById('predWord').textContent === 'Unknown sign', null, { timeout: T });
     await c.page.click('#stopBtn');
     assert.equal(await c.page.locator('#startBtn').isVisible(), true);
+    assert.deepEqual(c.errors, []);
+  });
+
+  await step('ASL model mode: meaning, confidence, unknown signs, no duplicates (stubbed ONNX runtime)', async () => {
+    const ctx = await newContext(browser, port);
+    const labels = { sequenceLength: 32, featureDim: 132, threshold: 0.7, labels: [{ gloss: 'HELLO', meaning: 'Hello' }, { gloss: 'THANK-YOU', meaning: 'Thank you' }, { gloss: 'YES', meaning: 'Yes' }] };
+    await ctx.route('**/models/asl/labels.json', (r) => r.fulfill({ contentType: 'application/json', body: JSON.stringify(labels) }));
+    await ctx.route('**/models/asl/metrics.json', (r) => r.fulfill({ contentType: 'application/json', body: JSON.stringify({ split: 'signer-disjoint', dataset: 'STUB (test only)', testClips: 50, testTop1: 0.9 }) }));
+    await ctx.route('**/models/asl/model.onnx', (r) => r.fulfill({ contentType: 'application/octet-stream', body: 'stub' }));
+    await ctx.addInitScript(() => {
+      window.__logits = [5, 0, 0];
+      window.ort = { env: { wasm: {} }, Tensor: class { constructor(t, d, s) { this.data = d; this.dims = s; } },
+        InferenceSession: { create: async () => ({ inputNames: ['input'], outputNames: ['logits'], run: async () => ({ logits: { data: window.__logits } }) }) } };
+    });
+    const c = await openPage(ctx, port, '/translate.html');
+    await c.page.click('[data-lang=asl]');
+    await c.page.waitForFunction(() => document.getElementById('engineName').textContent.includes('3-sign model installed'), null, { timeout: T });
+    assert.match(await text(c.page, '#engineMsg'), /top-1 90\.0%.*not used in training/);
+    await c.page.click('#startBtn');
+    await c.page.waitForFunction(() => document.getElementById('status').textContent.startsWith('Ready'), null, { timeout: T });
+    const sign = async (ms) => { await c.page.evaluate(() => { window.__gesture = 'Open_Palm'; }); await c.page.waitForTimeout(ms); await c.page.evaluate(() => { window.__gesture = null; }); };
+    await sign(1000);
+    await c.page.waitForFunction(() => document.getElementById('out').value === 'Hello', null, { timeout: T });
+    assert.equal(await text(c.page, '#predWord'), 'HELLO'); assert.equal(await text(c.page, '#predMeaning'), 'Hello');
+    assert.match(await text(c.page, '#predPct'), /^99%$/);
+    await sign(800); // the same sign straight away is a duplicate
+    await c.page.waitForTimeout(1500);
+    assert.match(await c.page.inputValue('#out'), /^Hello\.?$/, 'cooldown stops the repeat');
+    await c.page.evaluate(() => { window.__logits = [1, 1, 1]; });
+    await sign(1000);
+    await c.page.waitForFunction(() => document.getElementById('predWord').textContent === 'Unknown sign', null, { timeout: T });
+    assert.match(await text(c.page, '#predState'), /Unknown or unsupported/);
+    assert.match(await c.page.inputValue('#out'), /^Hello\.?$/, 'unknown signs are never translated');
+    await c.page.click('#stopBtn');
     assert.deepEqual(c.errors, []);
   });
 

@@ -8,6 +8,7 @@ export const MODELS = {
   isl: {
     name: 'Indian Sign Language (ISL)',
     status: 'planned',
+    dir: '/models/isl',
     file: '/models/isl/model.onnx',
     labelsFile: '/models/isl/labels.json',
     threshold: 0.7,
@@ -16,10 +17,11 @@ export const MODELS = {
   asl: {
     name: 'American Sign Language (ASL)',
     status: 'planned',
+    dir: '/models/asl',
     file: '/models/asl/model.onnx',
     labelsFile: '/models/asl/labels.json',
     threshold: 0.7,
-    note: 'Planned: needs a dataset whose licence allows a hosted app. See model-research/asl.md.',
+    note: 'Target: 100 ASL signs (50 core). No model is shipped. Train one with training/ on a dataset you are licensed to use, then add it under public/models/asl/.',
   },
 };
 

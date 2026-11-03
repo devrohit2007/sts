@@ -51,9 +51,19 @@ h2{font-size:11px;font-weight:600;letter-spacing:.8px;text-transform:uppercase;c
 .btn.p:hover{background:var(--ac-hi)}
 .btn.r{background:var(--red);border-color:var(--red);color:#fff}
 .btn.grow{flex:1}
+.chips{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:12px}
+.chip{display:inline-flex;align-items:center;gap:6px;padding:5px 10px;border-radius:99px;background:var(--s2);border:1px solid var(--line);font-size:12px;color:var(--tx2)}
+.chip::before{content:'';width:7px;height:7px;border-radius:50%;background:var(--tx3)}
+.chip[data-on=true]{color:var(--tx)}.chip[data-on=true]::before{background:var(--green)}
+.chip[data-on=warn]::before{background:var(--amber)}
+.pred .k{font-size:10.5px;letter-spacing:.7px;text-transform:uppercase;color:var(--tx3);margin-top:10px}
+.pred .m{font-size:16px;font-weight:500;color:var(--tx);min-height:22px}
+.bar{position:relative}
+.bar u{position:absolute;top:-2px;bottom:-2px;width:2px;background:var(--tx2);opacity:.7}
+.alts{font-size:12px;color:var(--tx3);margin-top:8px;min-height:16px}
 .pred{margin-bottom:12px;padding:14px;border-radius:var(--r);background:var(--s2);border:1px solid var(--line);border-left:3px solid var(--tx3)}
 .pred[data-state=sign]{border-left-color:var(--green)}
-.pred[data-state=uncertain]{border-left-color:var(--amber)}
+.pred[data-state=unknown],.pred[data-state=uncertain]{border-left-color:var(--amber)}
 .pred .w{font-size:26px;font-weight:700;letter-spacing:-.5px;line-height:1.2}
 .pred .s{font-size:12px;color:var(--tx2);margin-top:3px;min-height:16px}
 .bar{height:5px;background:var(--s3);border-radius:9px;margin-top:10px;overflow:hidden}
@@ -122,13 +132,13 @@ textarea:focus{border-color:var(--ac);box-shadow:0 0 0 3px var(--ac-soft)}
         <video id="video" playsinline muted></video>
         <canvas id="overlay"></canvas>
       </div>
-      <div class="idle"><svg class="ic"><use href="#i-cam"/></svg><p>Turn on the camera to begin</p></div>
+      <div class="idle"><svg class="ic"><use href="#i-cam"/></svg><p>Start recognition to turn on the camera</p></div>
       <div class="status" id="status" role="status">Camera is off</div>
     </div>
 
     <div class="ctl">
-      <button class="btn p grow" id="startBtn"><svg class="ic"><use href="#i-cam"/></svg>Start camera</button>
-      <button class="btn r grow" id="stopBtn" hidden><svg class="ic"><use href="#i-stop"/></svg>Stop camera</button>
+      <button class="btn p grow" id="startBtn"><svg class="ic"><use href="#i-cam"/></svg>Start recognition</button>
+      <button class="btn r grow" id="stopBtn" hidden><svg class="ic"><use href="#i-stop"/></svg>Stop recognition</button>
       <button class="btn" id="flipBtn" disabled aria-label="Switch front and rear camera"><svg class="ic"><use href="#i-flip"/></svg></button>
       <button class="btn" onclick="openModal('privacyModal')" aria-label="Privacy"><svg class="ic"><use href="#i-shield"/></svg></button>
     </div>
@@ -141,11 +151,21 @@ textarea:focus{border-color:var(--ac);box-shadow:0 0 0 3px var(--ac-soft)}
       <span id="engineMsg"></span>
     </div>
 
+    <div class="chips" aria-label="Recognition status">
+      <span class="chip" id="chipCam" data-on="false">Camera off</span>
+      <span class="chip" id="chipHands" data-on="false">No hand</span>
+      <span class="chip" id="chipEngine" data-on="warn">Demo gestures</span>
+    </div>
+
     <div class="pred" id="predCard" data-state="idle" aria-live="polite">
       <span class="pct" id="predPct"></span>
+      <div class="k" id="kSign">Recognised sign</div>
       <div class="w" id="predWord">-</div>
+      <div class="k">English meaning</div>
+      <div class="m" id="predMeaning">-</div>
       <div class="s" id="predState"></div>
-      <div class="bar"><i id="predBar"></i></div>
+      <div class="bar"><i id="predBar"></i><u id="predTick" hidden></u></div>
+      <div class="alts" id="predAlts"></div>
     </div>
 
     <h2>Translation (editable)</h2>
