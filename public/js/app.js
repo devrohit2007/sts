@@ -8,7 +8,7 @@ import { appendWord, finishSentence } from './languages/sentenceBuilder.js';
 import { $, toast } from './ui.js';
 
 const video = $('video'); const canvas = $('overlay'); const out = $('out');
-let lang = 'isl'; let facing = 'user'; let running = false; let idleT = 0;
+let lang = 'asl'; let facing = 'user'; let running = false; let idleT = 0;
 
 // ---------- Language + engine ----------
 // Engine = the trained model for this language if one is installed and loads, otherwise demo gestures.
@@ -30,6 +30,10 @@ async function paintEngine() {
       ? ' Pretrained ASLNow! static fingerspelling model: A–Z. J and Z require movement and are not recognised by this static model. Accuracy has not been independently tested in STS.'
       : (mt ? ` Held-out test result from the training run: top-1 ${(mt.top1 * 100).toFixed(1)}% on ${mt.clips} clips from signers not used in training (${mt.dataset}). Real-world accuracy will be lower.` : ' No evaluation report is installed, so accuracy is unknown.');
     chip('chipEngine', `${lang.toUpperCase()} model, ${n} signs`, true);
+  } else if (lang === 'asl') {
+    $('engineName').textContent = 'ASL fingerspelling model unavailable';
+    $('engineMsg').textContent = 'The ASLNow model files could not be verified. ASL recognition is stopped; demo gestures will not be substituted.';
+    chip('chipEngine', 'ASL model unavailable', 'warn');
   } else {
     $('engineName').textContent = STARTER.name;
     $('engineMsg').textContent = `No trained ${lang.toUpperCase()} model is installed. Demo mode recognises 7 basic hand shapes, not real ${lang.toUpperCase()} signs. ${m.note}`;
@@ -101,9 +105,28 @@ async function start() {
     $('startBtn').disabled = false; setStatus('Camera is off'); return toast(explainCameraError(e), 5000);
   }
   running = true; paintRunning(); chip('chipCam', 'Camera on', true);
-  if (found) {
+  if (lang === 'asl') {
+    setStatus('Loading ASL fingerspelling model...', 'wait');
+    try {
+      if (!found) throw new Error('ASL model files were not found under /models/asl');
+      model = await loadAslNowModel(MODELS.asl.dir);
+      if (model?.kind !== 'aslnow') throw new Error('Loaded model did not identify as ASLNow');
+      chip('chipEngine', 'ASL A-Z model loaded', true);
+    } catch (e) {
+      console.error('ASL model load failed:', e);
+      model = null; running = false; stopCamera(); video.srcObject = null;
+      paintRunning(); chip('chipCam', 'Camera off', false);
+      chip('chipEngine', 'ASL model failed to load', 'warn');
+      $('engineName').textContent = 'ASL fingerspelling model failed to load';
+      $('engineMsg').textContent = e?.message || 'TensorFlow.js could not load the model. Demo mode was not started.';
+      setStatus('ASL model failed to load. Demo mode was not started.', 'wait');
+      showPrediction({ state: 'error' });
+      $('startBtn').disabled = false;
+      return toast('ASL model failed to load. Check the model files and TensorFlow.js connection, then retry.', 6000);
+    }
+  } else if (found) {
     setStatus(`Loading ${lang.toUpperCase()} sign model...`, 'wait');
-    try { model = lang === 'asl' ? await loadAslNowModel(MODELS[lang].dir) : await loadModel(MODELS[lang].dir, { meta: found.meta }); } catch (e) {
+    try { model = await loadModel(MODELS[lang].dir, { meta: found.meta }); } catch (e) {
       console.error(e); model = null; chip('chipEngine', 'Model failed: demo gestures', 'warn');
       toast(`Could not load the ${lang.toUpperCase()} model. Using demo gestures instead.`, 5000);
     }

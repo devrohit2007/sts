@@ -440,9 +440,23 @@ async function toggleSign() {
   signModel = null;
   if ($('signMode').value === 'asl') {
     try {
-      if (await findAslNowModel(MODELS.asl.dir)) signModel = await loadAslNowModel(MODELS.asl.dir);
-    } catch (e) { console.error(e); toast('Could not load the ASL letters model. Using demo gestures.', 5000); }
-    if (!signModel) $('signMode').value = 'demo';
+      const available = await findAslNowModel(MODELS.asl.dir);
+      if (!available) throw new Error('ASL model files were not found under /models/asl');
+      signModel = await loadAslNowModel(MODELS.asl.dir);
+      if (signModel?.kind !== 'aslnow') throw new Error('Loaded model did not identify as ASLNow');
+    } catch (e) {
+      console.error('ASL model load failed:', e);
+      signModel?.dispose?.(); signModel = null;
+      $('liveWord').textContent = 'Model unavailable';
+      $('liveHint').textContent = e?.message || 'ASL model could not be loaded. Demo mode was not started.';
+      $('signNote').textContent = 'ASL fingerspelling is unavailable because the model failed to load. Choose Demo gestures explicitly if you want the generic demo recogniser.';
+      $('guideTitle').textContent = 'ASL model unavailable';
+      $('guideIntro').textContent = 'The ASLNow model did not load. No demo predictions will be shown as ASL letters.';
+      $('guideRows').replaceChildren();
+      $('tray').hidden = false;
+      paintControls();
+      return toast('ASL model failed to load. Demo mode was not started. Check the model files and TensorFlow.js connection.', 6000);
+    }
   }
   paintSignMode();
   try { await detector.start(); } catch (e) {
