@@ -94,8 +94,8 @@ a:hover{text-decoration:underline}
 .stage{flex:1;min-width:0;display:flex;flex-direction:column;padding:12px;gap:10px}
 
 /* Video grid */
-.grid{flex:1;min-height:0;display:grid;gap:10px;grid-template-columns:repeat(auto-fit,minmax(min(100%,300px),1fr));grid-auto-rows:minmax(0,1fr)}
-.tile{position:relative;background:var(--s1);border:1px solid var(--line);border-radius:var(--r-lg);overflow:hidden;min-height:0}
+.grid{flex:1;min-height:0;display:grid;gap:10px;grid-template-columns:repeat(auto-fit,minmax(min(100%,300px),min(100%,520px)));grid-auto-rows:auto;align-content:center;justify-content:center}
+.tile{position:relative;background:var(--s1);border:1px solid var(--line);border-radius:var(--r-lg);overflow:hidden;min-height:0;width:100%;max-width:520px;aspect-ratio:1/1;justify-self:center}
 .tile video,.tile canvas.overlay{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;background:#06070A}
 .tile canvas.overlay{background:none;pointer-events:none}
 .tile.me video,.tile.me canvas.overlay{transform:scaleX(-1)}
