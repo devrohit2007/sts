@@ -138,6 +138,7 @@ a:hover{text-decoration:underline}
 .chips{flex:1;min-width:100px;display:flex;gap:6px;flex-wrap:wrap}
 .chip{background:var(--ac-soft);color:var(--ac-hi);border:1px solid rgba(101,115,242,.25);padding:4px 10px;border-radius:99px;font-size:12.5px;font-weight:600}
 .demo-note{flex-basis:100%;font-size:11.5px;color:var(--amber)}
+.ver{opacity:.7}
 .quick{overflow-x:auto;gap:8px;scrollbar-width:thin}
 .q{flex-shrink:0;background:var(--s2);border:1px solid var(--line);padding:9px 14px;border-radius:99px;font-size:13px;cursor:pointer;min-height:40px;white-space:nowrap}
 .q:hover{border-color:var(--ac);background:var(--ac-soft)}
@@ -201,6 +202,23 @@ a:hover{text-decoration:underline}
   .grid{grid-template-columns:1fr}
   .capwrap{max-height:30vh}
 }
+/* Landscape phones and small tablets: the camera gets the whole left side, captions and controls stack on the right. */
+@media (orientation:landscape) and (max-height:720px){
+  .top{height:44px;padding:0 10px}
+  .side{position:fixed;right:0;top:44px;bottom:0;width:min(60vw,340px);z-index:600;transform:translateX(100%);transition:transform .22s ease;box-shadow:-12px 0 32px rgba(0,0,0,.45);visibility:hidden}
+  .side.open{transform:none;visibility:visible}
+  .stage{display:grid;grid-template-columns:minmax(0,1fr) clamp(240px,30vw,340px);grid-template-rows:minmax(0,1fr) auto auto auto;gap:8px;padding:8px}
+  .grid{grid-column:1;grid-row:1 / -1;grid-template-columns:repeat(auto-fit,minmax(min(100%,260px),1fr))}
+  .tile video,.tile canvas.overlay{object-fit:contain}
+  .capwrap{grid-column:2;grid-row:1;max-height:none;overflow:hidden}
+  .tray{grid-column:2;grid-row:2;max-height:40dvh;overflow-y:auto}
+  .quick{grid-column:2;grid-row:3;flex-wrap:wrap;max-height:88px;overflow-y:auto}
+  .controls{grid-column:2;grid-row:4;flex-wrap:nowrap;padding-bottom:0}
+  .cb{min-width:0;flex:1 1 0;padding:8px 0;min-height:44px}
+  .cb span{display:none}
+  .cap p{font-size:min(var(--cap-size),22px)}
+  .top .title{display:none}
+}
 @media (prefers-reduced-motion:reduce){*{transition:none!important;animation:none!important}}
 </style>
 </head>
@@ -262,7 +280,7 @@ a:hover{text-decoration:underline}
       <p class="err" id="authErr" role="alert" hidden></p>
       <p class="note">Guests get a temporary identity for this visit only. Nothing about guests is stored.</p>
     </div>
-    <p class="foot"><a href="/translate.html">Sign translator</a> &middot; <a href="#" onclick="openModal('privacyModal');return false">Privacy</a></p>
+    <p class="foot"><a href="/translate.html">Sign translator</a> &middot; <a href="#" onclick="openModal('privacyModal');return false">Privacy</a> &middot; <span class="ver" data-ver></span></p>
   </div>
 </main>
 
@@ -287,7 +305,7 @@ a:hover{text-decoration:underline}
       <p class="err" id="lobbyErr" role="alert" hidden></p>
       <p class="note">Your browser will ask for camera and microphone access after you enter a room.</p>
     </div>
-    <p class="foot"><a href="/translate.html">Sign translator</a> &middot; <a href="#" onclick="openModal('privacyModal');return false">Privacy</a></p>
+    <p class="foot"><a href="/translate.html">Sign translator</a> &middot; <a href="#" onclick="openModal('privacyModal');return false">Privacy</a> &middot; <span class="ver" data-ver></span></p>
   </div>
 </main>
 

@@ -65,7 +65,12 @@ app.get('/config', (req, res) => {
   res.set('Cache-Control', 'no-store');
   res.json(config);
 });
-app.use(express.static(path.join(__dirname, 'public')));
+app.use(express.static(path.join(__dirname, 'public'), {
+  setHeaders(res, file) {
+    // The ASL model files never change between releases; everything else must be revalidated.
+    res.setHeader('Cache-Control', file.includes(`${path.sep}models${path.sep}`) ? 'public, max-age=86400' : 'no-cache');
+  },
+}));
 
 const server = http.createServer(app);
 
@@ -82,6 +87,10 @@ io.on('connection', (socket) => {
 
 const PORT = env.PORT || 3000;
 server.listen(PORT, () => console.log(`STS listening on :${PORT}`));
+
+// A bug in one request must be logged, not take the whole call service down.
+process.on('unhandledRejection', (e) => console.error('[unhandledRejection]', e && e.stack ? e.stack : e));
+process.on('uncaughtException', (e) => console.error('[uncaughtException]', e && e.stack ? e.stack : e));
 
 // Render sends SIGTERM on redeploy.
 process.on('SIGTERM', () => {

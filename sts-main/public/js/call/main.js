@@ -9,6 +9,7 @@ import { createSignDetector } from '../recognition/signDetector.js';
 import { STARTER, MODELS } from '../recognition/modelRegistry.js';
 import { findAslNowModel, loadAslNowModel } from '../recognition/modelRunner.js';
 import { drawHands, clearHands } from '../vision/mediapipe.js';
+import { APP_VERSION } from '../version.js';
 
 const PHRASES = ['I need help', 'Please speak slowly', 'Can you repeat that?', 'Yes', 'No', 'Thank you', 'I cannot hear you', 'Please type in the chat'];
 const SCREENS = ['wake', 'auth', 'lobby', 'app'];
@@ -316,7 +317,7 @@ async function leaveRoom() {
   closeModal('leaveModal');
   if (!S.roomId) return;
   const was = S.roomId; S.roomId = null;
-  detector.stop(); speech.stop(); voice.set(false); stopWords();
+  stopWords(); teardownSign(); speech.stop(); voice.set(false);
   S.mesh.closeAll(); stopStream(S.local?.stream); S.local = null;
   try { await S.conn.emitAck('leave-room', {}, 3000); } catch (e) { /* server cleans up on disconnect */ }
   tiles.forEach((t) => { t.querySelector('video').srcObject = null; t.remove(); }); tiles.clear();
@@ -417,8 +418,13 @@ for (const t of PHRASES) {
   $('quick').appendChild(b);
 }
 
-// ---------- Sign detection (generic demo gestures, not real ISL/ASL) ----------
-let signModel = null; // loaded ASL letters model, or null = demo gestures
+// ---------- Sign detection ----------
+// Two engines: ASL fingerspelling letters (pretrained, see models/asl) and 7 generic demo gestures.
+const MAX_LETTERS = 20;      // the server accepts at most 20 characters per word
+const LETTER_FLUSH_MS = 4000; // pause between letters before the word is sent on its own
+const WORD_FLUSH_MS = 2200;
+let signModel = null;   // loaded ASL letters model, or null = demo gestures
+let signBusy = false;   // true while the Sign button is loading models
 const letters = () => signModel?.kind === 'aslnow';
 const detector = createSignDetector({
   getModel: () => signModel,
@@ -426,61 +432,85 @@ const detector = createSignDetector({
   onFrame: (r, v) => { const c = tiles.get('me')?.querySelector('canvas'); if (c) drawHands(c, v, r); },
   onPrediction: (p) => {
     const unsure = p.state === 'uncertain' || p.state === 'unknown';
-    $('liveWord').textContent = p.state === 'sign' ? p.word : unsure ? 'Uncertain sign' : '-';
-    $('liveHint').textContent = p.state === 'sign' ? 'Hold steady' : unsure ? 'Not confident enough' : 'Show a hand to the camera';
-    $('liveBar').style.width = p.score ? Math.round(p.score * 100) + '%' : '0%';
+    const best = unsure ? p.alternatives?.[0] : null; // what the model thinks even though it is not sure
+    $('liveWord').textContent = p.state === 'sign' ? p.word : best ? best.gloss + '?' : unsure ? 'Uncertain sign' : '-';
+    $('liveHint').textContent = p.state === 'sign' ? 'Hold steady'
+      : unsure ? (best ? `Not sure (${Math.round(best.score * 100)}%). Hold the letter steady` : 'Not confident enough')
+      : p.state === 'thinking' || p.state === 'collecting' ? 'Reading...' : 'Show a hand to the camera';
+    const score = p.state === 'sign' ? p.score : best ? best.score : p.score;
+    $('liveBar').style.width = score ? Math.round(score * 100) + '%' : '0%';
   },
   onWord: (w) => addWord(w),
 });
 
-async function toggleSign() {
-  if (detector.running) return stopSign();
-  if (!S.local?.video || !S.camOn) return toast('Turn your camera on first.', 3500);
-  $('tray').hidden = false; $('liveWord').textContent = '...'; $('liveHint').textContent = 'Loading hand detection model';
-  signModel = null;
-  if ($('signMode').value === 'asl') {
-    try {
-      if (await findAslNowModel(MODELS.asl.dir)) signModel = await loadAslNowModel(MODELS.asl.dir);
-    } catch (e) { console.error(e); toast('Could not load the ASL letters model. Using demo gestures.', 5000); }
-    if (!signModel) $('signMode').value = 'demo';
-  }
-  paintSignMode();
-  try { await detector.start(); } catch (e) {
-    console.error(e); $('tray').hidden = true;
-    toast('Could not load the hand detection model. Check your connection.', 5000); paintControls(); return;
-  }
-  tiles.get('me')?.classList.add('signing'); paintControls();
-}
 function paintSignMode() {
   const on = letters();
   $('signNote').textContent = on
-    ? 'ASL fingerspelling A-Z (J and Z need movement, so they are not recognised). Spell a word, then press Send.'
+    ? 'ASL fingerspelling: sign one letter at a time and hold it. J and Z need movement and are not recognised. Press Send after a word.'
     : 'Demo gestures: 7 basic hand shapes, not real ISL or ASL.';
-  $('guideTitle').textContent = on ? 'ASL letters' : 'Demo gestures';
-  $('guideIntro').textContent = on
-    ? 'Sign one fingerspelled letter at a time and hold it steady. Letters are joined into a word when you press Send. To repeat a letter (like LL), lower your hand between them.'
+  $('guideTitle').textContent = on || $('signMode').value === 'asl' ? 'ASL letters' : 'Demo gestures';
+  $('guideIntro').textContent = on || $('signMode').value === 'asl'
+    ? 'Sign one fingerspelled letter at a time and hold it steady. Letters are joined into a word when you press Send. For a double letter (like LL), lower your hand between the two.'
     : 'These are 7 generic hand shapes from a ready-made model. They are not real ISL or ASL signs. Hold one steady for about half a second.';
   const rows = $('guideRows'); rows.replaceChildren();
-  if (on) rows.appendChild(el('div', 'row', 'A B C D E F G H I K L M N O P Q R S T U V W X Y'));
-  else for (const [name, word] of Object.values(STARTER.labels)) {
+  if ($('signMode').value === 'asl') {
+    const row = el('div', 'row'); row.append(el('span', '', 'Letters recognised'), el('b', '', 'A-Y (not J, Z)')); rows.appendChild(row);
+  } else for (const [name, word] of Object.values(STARTER.labels)) {
     const r = el('div', 'row'); r.append(el('span', '', name), el('b', '', word)); rows.appendChild(r);
   }
 }
-$('signMode').addEventListener('change', async () => { store.set('sts.signMode', $('signMode').value); if (detector.running) { stopSign(); await toggleSign(); } });
-function stopSign() {
-  detector.stop(); stopWords(true); signModel?.dispose?.(); signModel = null;
-  const c = tiles.get('me')?.querySelector('canvas'); if (c) clearHands(c);
-  tiles.get('me')?.classList.remove('signing'); $('tray').hidden = true; paintControls();
+
+async function loadSignModel() {
+  signModel = null;
+  if ($('signMode').value !== 'asl') return;
+  try {
+    if (!(await findAslNowModel(MODELS.asl.dir))) throw new Error('model files not found');
+    signModel = await loadAslNowModel(MODELS.asl.dir);
+  } catch (e) {
+    console.error('ASL model', e);
+    $('signMode').value = 'demo';
+    toast('The ASL letters model could not be loaded, so demo gestures are on instead.', 6000);
+  }
 }
+
+async function toggleSign() {
+  if (detector.running) return stopSign();
+  if (signBusy) return;
+  if (!S.local?.video || !S.camOn) return toast('Turn your camera on first.', 3500);
+  signBusy = true;
+  $('tray').hidden = false; $('liveWord').textContent = '...'; $('liveHint').textContent = 'Loading sign model';
+  try {
+    await loadSignModel();
+    paintSignMode();
+    $('liveHint').textContent = 'Loading hand detection model';
+    await detector.start();
+    tiles.get('me')?.classList.add('signing');
+  } catch (e) {
+    console.error(e); teardownSign();
+    toast('Could not load the hand detection model. Check your connection.', 5000);
+  } finally { signBusy = false; paintControls(); }
+}
+function teardownSign() {
+  detector.stop(); signModel?.dispose?.(); signModel = null;
+  const c = tiles.get('me')?.querySelector('canvas'); if (c) clearHands(c);
+  tiles.get('me')?.classList.remove('signing'); $('tray').hidden = true;
+}
+function stopSign() { stopWords(true); teardownSign(); paintControls(); }
 $('signB').addEventListener('click', toggleSign);
+$('signMode').addEventListener('change', async () => {
+  store.set('sts.signMode', $('signMode').value);
+  paintSignMode();
+  if (detector.running) { stopSign(); await toggleSign(); }
+});
 
 function drawChips() {
   const box = $('chips'); box.replaceChildren();
   for (const w of S.words) box.appendChild(el('span', 'chip', w));
 }
 function addWord(w) {
+  if (letters() && S.words.length >= MAX_LETTERS) return toast('That is a long word. Press Send.', 2500);
   S.words.push(w); drawChips();
-  clearTimeout(S.flushTimer); S.flushTimer = setTimeout(sendWords, 2200);
+  clearTimeout(S.flushTimer); S.flushTimer = setTimeout(sendWords, letters() ? LETTER_FLUSH_MS : WORD_FLUSH_MS);
 }
 function sendWords() {
   clearTimeout(S.flushTimer);
@@ -513,7 +543,8 @@ $('sideBtn').addEventListener('click', () => {
 function addChat({ from, fromId, text }) {
   const d = el('div', 'msg'); d.append(el('b', '', fromId === S.myId ? 'You' : from), document.createTextNode(text));
   const box = $('msgs'); box.appendChild(d); box.scrollTop = box.scrollHeight;
-  const chatVisible = !$('paneChat').hidden && (window.innerWidth > 820 || $('side').classList.contains('open'));
+  const overlay = getComputedStyle($('side')).position === 'fixed'; // narrow or landscape-phone layout: the panel slides in
+  const chatVisible = !$('paneChat').hidden && (!overlay || $('side').classList.contains('open'));
   if (!chatVisible && fromId !== S.myId) { S.unread++; $('unread').hidden = false; }
 }
 function sendChat() { const i = $('chatIn'); const text = i.value.trim(); if (text) { S.conn.emit('chat-message', { text }); i.value = ''; } }
@@ -624,6 +655,8 @@ S.mesh = createMesh({
 });
 
 // ---------- Go ----------
+document.querySelectorAll('[data-ver]').forEach((n) => { n.textContent = 'v' + APP_VERSION; });
+console.info('STS call page v' + APP_VERSION);
 const pre = new URLSearchParams(location.search).get('room'); if (pre) S.pendingRoom = pre;
 setCapSize(S.capSize);
 boot();

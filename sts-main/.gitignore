@@ -4,3 +4,7 @@ node_modules
 # Python cache
 __pycache__/
 *.py[cod]
+
+# OS / archives
+.DS_Store
+*.zip

@@ -11,7 +11,8 @@ Rule: no invented weights, accuracy or vocabulary. Anything not verified is mark
 | Starter gestures (7 generic hand shapes) | Implemented, demo only, not real ISL/ASL |
 | Model registry, uncertainty state, sentence builder | Implemented |
 | Trained ISL model | Planned (Milestone 4) |
-| Trained ASL model | Planned (Milestone 3), blocked by licences below |
+| ASL fingerspelling letters (ASLNow!, MIT) | Installed, runs in plain JS. Real-world accuracy not measured |
+| Word-level ASL model | Planned (Milestone 3), blocked by licences below |
 | ONNX Runtime Web inference | Planned, not connected |
 | Continuous recognition | Planned, needs a sequence model |
 

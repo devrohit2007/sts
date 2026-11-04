@@ -18,8 +18,8 @@ export const MODELS = {
     name: 'American Sign Language (ASL) fingerspelling',
     status: 'pretrained-static-letters',
     dir: '/models/asl',
-    threshold: 0.65,
-    note: 'Pretrained ASLNow! model recognises static fingerspelled letters A–Z. J and Z require movement and are not supported by this static model.',
+    threshold: 0.5,
+    note: 'Pretrained ASLNow! model recognises static fingerspelled letters. J and Z need movement, so this static model cannot read them reliably.',
   },
 };
 

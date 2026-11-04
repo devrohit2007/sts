@@ -8,13 +8,15 @@ import { appendWord, finishSentence } from './languages/sentenceBuilder.js';
 import { $, toast } from './ui.js';
 
 const video = $('video'); const canvas = $('overlay'); const out = $('out');
-let lang = 'isl'; let facing = 'user'; let running = false; let idleT = 0;
+let lang = 'asl'; let facing = 'user'; let running = false; let idleT = 0;
 
 // ---------- Language + engine ----------
 // Engine = the trained model for this language if one is installed and loads, otherwise demo gestures.
 let model = null;       // loaded trained model, or null (demo gestures)
 let found = null;       // { meta, metrics } from findModel for the current language
 let paintSeq = 0;
+let lastLetterAt = 0;
+let enginePromise = Promise.resolve(); // start() waits for it, so tapping Start early still loads the model
 
 function chip(id, text, on) { const c = $(id); c.textContent = text; c.dataset.on = String(on); }
 
@@ -27,7 +29,7 @@ async function paintEngine() {
     const n = f.meta.labels.length; const mt = f.metrics;
     $('engineName').textContent = `${m.name}: ${n}-sign model installed`;
     $('engineMsg').textContent = lang === 'asl'
-      ? ' Pretrained ASLNow! static fingerspelling model: A–Z. J and Z require movement and are not recognised by this static model. Accuracy has not been independently tested in STS.'
+      ? ' Pretrained ASLNow! fingerspelling model (letters). Sign one letter at a time and hold it still. J and Z need movement, so this static model cannot read them. Accuracy has not been independently tested in STS.'
       : (mt ? ` Held-out test result from the training run: top-1 ${(mt.top1 * 100).toFixed(1)}% on ${mt.clips} clips from signers not used in training (${mt.dataset}). Real-world accuracy will be lower.` : ' No evaluation report is installed, so accuracy is unknown.');
     chip('chipEngine', `${lang.toUpperCase()} model, ${n} signs`, true);
   } else {
@@ -41,7 +43,7 @@ document.querySelectorAll('[data-lang]').forEach((b) => b.addEventListener('clic
   if (running) stop(); // the engine changes, so restart cleanly
   lang = b.dataset.lang;
   document.querySelectorAll('[data-lang]').forEach((x) => x.setAttribute('aria-pressed', String(x === b)));
-  paintEngine();
+  enginePromise = paintEngine();
 }));
 
 // ---------- Prediction card ----------
@@ -81,7 +83,13 @@ const detector = createSignDetector({
   onFrame: (r, v) => { drawHands(canvas, v, r); showHands(r); },
   onPrediction: showPrediction,
   onWord: (word) => {
-    out.value = model?.kind === 'aslnow' ? (out.value + word) : appendWord(out.value, word);
+    if (model?.kind === 'aslnow') {
+      // Letters: a pause of more than 2.5 s starts a new word. No full stop is added.
+      const t = Date.now(); const gap = t - lastLetterAt; lastLetterAt = t;
+      out.value += (out.value && gap > 2500 && !out.value.endsWith(' ') ? ' ' : '') + word;
+      return;
+    }
+    out.value = appendWord(out.value, word);
     clearTimeout(idleT); idleT = setTimeout(() => { out.value = finishSentence(out.value); }, 2500);
   },
 });
@@ -101,6 +109,8 @@ async function start() {
     $('startBtn').disabled = false; setStatus('Camera is off'); return toast(explainCameraError(e), 5000);
   }
   running = true; paintRunning(); chip('chipCam', 'Camera on', true);
+  await enginePromise;
+  if (!running) return;
   if (found) {
     setStatus(`Loading ${lang.toUpperCase()} sign model...`, 'wait');
     try { model = lang === 'asl' ? await loadAslNowModel(MODELS[lang].dir) : await loadModel(MODELS[lang].dir, { meta: found.meta }); } catch (e) {
@@ -119,7 +129,7 @@ function stop() {
   running = false; detector.stop(); stopCamera(); video.srcObject = null;
   clearHands(canvas); clearTimeout(idleT); paintRunning(); $('startBtn').disabled = false;
   setStatus('Camera is off'); chip('chipCam', 'Camera off', false); showHands(null); showPrediction(null);
-  paintEngine(); // forget the loaded model; the next start reloads it
+  enginePromise = paintEngine(); // forget the loaded model; the next start reloads it
 }
 $('startBtn').addEventListener('click', start);
 $('stopBtn').addEventListener('click', stop);
@@ -158,4 +168,4 @@ $('speakBtn').addEventListener('click', () => {
 });
 
 window.addEventListener('beforeunload', () => stopCamera());
-paintEngine(); paintRunning(); showPrediction(null);
+enginePromise = paintEngine(); paintRunning(); showPrediction(null);

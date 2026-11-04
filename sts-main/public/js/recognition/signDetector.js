@@ -7,7 +7,7 @@ import { STARTER } from './modelRegistry.js';
 import { HoldTracker } from './holdTracker.js';
 import { frameFeatures } from './features.js';
 import { SignSegmenter } from './segmenter.js';
-import { decide, Cooldown } from './decision.js';
+import { decide, Cooldown, ProbSmoother } from './decision.js';
 
 // One MediaPipe result -> { state: 'nohand' | 'uncertain' | 'sign', word?, label?, score? }
 export function classify(result, starter = STARTER) {
@@ -23,6 +23,7 @@ export function createSignDetector({ getVideo, getModel = () => null, onFrame, o
   const tracker = new HoldTracker({ holdFrames });
   const segmenter = new SignSegmenter();
   const cooldown = new Cooldown();
+  const smoother = new ProbSmoother(4);
   let running = false; let raf = 0; let last = 0; let vision = null; let inferring = false;
 
   async function infer(model, clip) {
@@ -55,12 +56,12 @@ export function createSignDetector({ getVideo, getModel = () => null, onFrame, o
     const model = getModel();
     if (model?.kind === 'aslnow') {
       const hand = result?.landmarks?.[0];
-      if (!hand) { tracker.miss(true); onPrediction?.({ state: 'nohand' }); return; }
+      if (!hand) { tracker.miss(true); smoother.reset(); onPrediction?.({ state: 'nohand' }); return; }
       if (inferring) return;
       inferring = true;
       Promise.resolve(model.predictLandmarks(hand)).then((scores) => {
         if (!running) return;
-        const d = decide(scores, model.labels, { minConf: model.threshold, minMargin: 0.10 });
+        const d = decide(smoother.push(scores), model.labels, { minConf: model.threshold, minMargin: 0.10 });
         onPrediction?.(d);
         if (d.state === 'sign') { const w = tracker.sign(d.word); if (w) onWord?.(w, d); }
         else tracker.miss(false);
@@ -84,6 +85,6 @@ export function createSignDetector({ getVideo, getModel = () => null, onFrame, o
       try { vision = await loadVision(); } catch (e) { running = false; throw e; }
       if (running) raf = requestAnimationFrame(loop);
     },
-    stop() { running = false; cancelAnimationFrame(raf); tracker.reset(); segmenter.reset(); cooldown.reset(); },
+    stop() { running = false; cancelAnimationFrame(raf); tracker.reset(); segmenter.reset(); cooldown.reset(); smoother.reset(); },
   };
 }

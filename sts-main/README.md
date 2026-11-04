@@ -4,8 +4,8 @@
 designed to make conversations easier between people who communicate
 through gestures, speech, and text.
 
-> **Prototype note:** The current gesture feature recognizes a limited
-> set of supported gestures. It is not a complete Indian Sign Language
+> **Prototype note:** The current gesture feature recognizes ASL fingerspelling
+> letters and a few demo gestures. It is not a complete Indian Sign Language
 > (ISL) or American Sign Language (ASL) translation system.
 
 ## Live Demo
@@ -194,15 +194,22 @@ https://sts-server-w1ps.onrender.com/health
 If the frontend domain changes, update both Firebase Authorized domains
 and Render's `CORS_ORIGIN` allowlist.
 
-## ASL Recognition (50 to 100 signs)
+## ASL Recognition
 
-**Status: the engine is built and tested; no trained ASL model is included.** Until you train and add one, the Translator runs in demo mode (7 basic hand shapes, not real ASL).
+**Status: ASL fingerspelling letters work. Word-level signs (50 to 100 signs) do not exist yet.**
 
--   Target vocabulary: 50 core + 50 extended ASL signs (`public/js/recognition/aslVocabulary.js`).
--   Pipeline: MediaPipe hand landmarks, then a small sequence model (ONNX) run in the browser with ONNX Runtime Web.
--   The Translator shows camera preview, hand status, recognised sign, English meaning, confidence, and "Unknown or unsupported sign". Signs below 70% confidence, or too close to the runner-up, are never translated. A cooldown stops repeated words.
--   Training code: `training/` (signer-disjoint split, test set used once). Read `training/README.md`, including the dataset licence warning.
--   Accuracy is shown only from a real `metrics.json` produced by that training run.
+-   **Installed:** the pretrained ASLNow! model (MIT licence) in `public/models/asl/`. It reads static
+    fingerspelled letters from one hand. J and Z need movement, so it cannot read them. It runs in plain
+    JavaScript in the browser (`public/js/recognition/aslnow.js`), with no extra library to download.
+-   **Where:** Video calls page (tap **Sign**, choose *ASL letters A-Z*) and the Translator page (ASL is the default).
+-   **How it reads:** letters are smoothed over a few frames, a letter must be held steady, and the model
+    also reads the mirrored hand, so left and right hands both work. Letters are joined into a word and sent when you press **Send**.
+-   **Accuracy has not been measured on real webcam hands.** The automated tests use synthetic hands made from the
+    model itself, so they prove the plumbing works, not how accurate it is.
+-   **Not available:** the 100-word target list (`aslVocabulary.js`) is only a list. No model for those words is included.
+    To get word signs, train one with `training/` (read its licence warning first).
+-   The confidence threshold for letters is `MODELS.asl.threshold` in `modelRegistry.js` (currently 0.5).
+
 
 ## Security Notes
 
@@ -239,8 +246,8 @@ and Render's `CORS_ORIGIN` allowlist.
 STS is a hackathon prototype, not a certified accessibility or
 sign-language interpretation product.
 
--   Without a trained model, gesture recognition covers only 7 basic demo
-    shapes. A trained ASL model must be added (see ASL Recognition).
+-   Recognition covers ASL fingerspelling letters (A-Y) and 7 basic demo gestures.
+    Word-level ISL/ASL signs need a trained model (see ASL Recognition).
 -   Accuracy can vary with lighting, camera quality, hand position, and
     movement.
 -   Browser speech features are not supported identically across

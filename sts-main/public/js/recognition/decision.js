@@ -28,3 +28,17 @@ export class Cooldown {
     return true;
   }
 }
+
+// Averages the last few frames of class probabilities so one noisy frame cannot flip the answer.
+// push() returns the average; reset() when the hand leaves the picture.
+export class ProbSmoother {
+  constructor(size = 4) { this.size = Math.max(1, size | 0); this.reset(); }
+  reset() { this.buf = []; }
+  push(probs) {
+    this.buf.push(Array.from(probs));
+    if (this.buf.length > this.size) this.buf.shift();
+    const n = this.buf.length; const out = new Array(probs.length).fill(0);
+    for (const row of this.buf) for (let i = 0; i < out.length; i++) out[i] += row[i] / n;
+    return out;
+  }
+}

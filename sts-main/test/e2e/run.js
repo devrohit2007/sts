@@ -30,6 +30,8 @@ const { createAuthenticator } = require('../../lib/auth');
 const { publicConfig } = require('../../lib/config');
 
 const PUBLIC = path.join(__dirname, '../../public');
+const PROTOS = require('../fixtures/asl-prototypes.json'); // synthetic hands made from the model (plumbing test, not accuracy)
+const hand = (letter, flip = false) => PROTOS[letter].map(([x, y, z]) => ({ x: flip ? 1 - x : x, y, z }));
 const quiet = { log() {}, warn() {}, error: console.error };
 
 // ---------------- server side ----------------
@@ -107,8 +109,10 @@ export const GestureRecognizer = {
   HAND_CONNECTIONS: [],
   createFromOptions: async () => ({
     recognizeForVideo() {
+      const hand = (f) => Array.from({ length: 21 }, (_, i) => f(i));
+      if (window.__landmarks) return { landmarks: [window.__landmarks], gestures: [[{ categoryName: 'None', score: .9 }]] };
       const g = window.__gesture;
-      return g ? { landmarks: [[{ x: .5, y: .5 }]], gestures: [[{ categoryName: g, score: .95 }]] } : { landmarks: [], gestures: [] };
+      return g ? { landmarks: [hand((i) => ({ x: .5 + i * .001, y: .5, z: 0 }))], gestures: [[{ categoryName: g, score: .95 }]] } : { landmarks: [], gestures: [] };
     },
   }),
 };`;
@@ -259,9 +263,12 @@ const remoteVideoPlaying = (page) => page.waitForFunction(
     assert.match(await text(B.page, '#caps .cap small'), /Asha says/);
   });
 
-  await step('sign detection: words are captioned, then replaced by the AI sentence', async () => {
+  await step('sign detection (demo gestures): words are captioned, then replaced by the AI sentence', async () => {
     await A.page.click('#signB');
     await visible(A.page, '#tray');
+    await A.page.waitForFunction(() => /ASL fingerspelling/.test(document.getElementById('signNote').textContent), null, { timeout: T }); // ASL letters is the default
+    await A.page.selectOption('#signMode', 'demo'); // switching restarts detection with the demo gestures
+    await A.page.waitForFunction(() => /Demo gestures/.test(document.getElementById('signNote').textContent) && !document.getElementById('tray').hidden, null, { timeout: T });
     await A.page.waitForFunction(() => document.getElementById('liveHint').textContent !== 'Loading hand detection model', null, { timeout: T });
     await A.page.evaluate(() => { window.__gesture = 'Thumb_Up'; });
     await A.page.waitForFunction(() => [...document.querySelectorAll('#chips .chip')].some((c) => c.textContent === 'good'), null, { timeout: T });
@@ -269,6 +276,33 @@ const remoteVideoPlaying = (page) => page.waitForFunction(
     await A.page.click('#sendWords');
     await B.page.waitForFunction(() => [...document.querySelectorAll('#caps .cap p')].some((p) => p.textContent === 'AI:good'), null, { timeout: T });
     assert.match(await text(B.page, '#transcript'), /AI:good/);
+    await A.page.click('#signB');
+    await A.page.waitForSelector('#tray', { state: 'hidden', timeout: T });
+  });
+
+  await step('call page ASL letters: letters from either hand are read, joined into a word and captioned', async () => {
+    assert.equal(await A.page.evaluate(() => localStorage.getItem('sts.signMode')), 'demo', 'the choice is remembered');
+    await A.page.click('#signB');
+    await visible(A.page, '#tray');
+    await A.page.waitForFunction(() => /Demo gestures/.test(document.getElementById('signNote').textContent), null, { timeout: T });
+    await A.page.selectOption('#signMode', 'asl');
+    await A.page.waitForFunction(() => /ASL fingerspelling/.test(document.getElementById('signNote').textContent), null, { timeout: T });
+    assert.equal(await A.page.inputValue('#signMode'), 'asl', 'the model loaded, so ASL stays selected');
+    const show = (lm) => A.page.evaluate((l) => { window.__landmarks = l; }, lm);
+    const chips = () => A.page.locator('#chips .chip').allInnerTexts();
+    await show(hand('B'));
+    await A.page.waitForFunction(() => [...document.querySelectorAll('#chips .chip')].some((c) => c.textContent === 'B'), null, { timeout: T });
+    assert.equal(await text(A.page, '#liveWord'), 'B');
+    await show(null); await A.page.waitForTimeout(900); // hand lowered: the next letter is a new one
+    await show(hand('L', true)); // a left hand (mirrored)
+    await A.page.waitForFunction(() => document.querySelectorAll('#chips .chip').length === 2, null, { timeout: T });
+    assert.deepEqual(await chips(), ['B', 'L']);
+    await show(null);
+    await A.page.click('#sendWords');
+    await B.page.waitForFunction(() => [...document.querySelectorAll('#caps .cap p')].some((p) => p.textContent === 'AI:BL'), null, { timeout: T });
+    await A.page.click('text=Sign guide'); await visible(A.page, '#guideModal.open');
+    assert.equal(await text(A.page, '#guideTitle'), 'ASL letters');
+    await A.page.keyboard.press('Escape');
     await A.page.click('#signB');
     await A.page.waitForSelector('#tray', { state: 'hidden', timeout: T });
   });
@@ -344,11 +378,14 @@ const remoteVideoPlaying = (page) => page.waitForFunction(
     await B.page.click('#signOutBtn'); await visible(B.page, '#auth');
   });
 
-  await step('translator page: camera starts, gestures become words, no real-model claims', async () => {
+  await step('translator page: ASL letters are the default and the demo gestures are still available', async () => {
     const c = await openPage(ctxA, port, '/translate.html');
-    assert.match(await text(c.page, '#engineName'), /Starter gestures \(demo\)/);
-    assert.match(await text(c.page, '#engineMsg'), /not real ISL/);
+    await c.page.waitForFunction(() => /26-sign model installed/.test(document.getElementById('engineName').textContent), null, { timeout: T });
+    assert.match(await text(c.page, '#engineMsg'), /letters/);
     assert.equal(await c.page.locator('[data-mode=continuous]').isDisabled(), true);
+    await c.page.click('[data-lang=isl]'); // no ISL model is installed: demo gestures
+    await c.page.waitForFunction(() => /Starter gestures \(demo\)/.test(document.getElementById('engineName').textContent), null, { timeout: T });
+    assert.match(await text(c.page, '#engineMsg'), /not real ISL/);
     await c.page.click('#startBtn');
     await c.page.waitForFunction(() => document.getElementById('status').textContent.startsWith('Ready'), null, { timeout: T });
     await c.page.evaluate(() => { window.__gesture = 'Victory'; });
@@ -360,19 +397,42 @@ const remoteVideoPlaying = (page) => page.waitForFunction(
     assert.deepEqual(c.errors, []);
   });
 
-  await step('ASL model mode: meaning, confidence, unknown signs, no duplicates (stubbed ONNX runtime)', async () => {
+  await step('translator page ASL letters: letters spell a word, a pause starts a new one, no full stop', async () => {
+    const ctx = await newContext(browser, port);
+    const c = await openPage(ctx, port, '/translate.html');
+    await c.page.waitForFunction(() => /26-sign model installed/.test(document.getElementById('engineName').textContent), null, { timeout: T });
+    await c.page.click('#startBtn');
+    await c.page.waitForFunction(() => document.getElementById('status').textContent.startsWith('Ready'), null, { timeout: T });
+    const show = (lm) => c.page.evaluate((l) => { window.__landmarks = l; }, lm);
+    await show(hand('B'));
+    await c.page.waitForFunction(() => document.getElementById('out').value === 'B', null, { timeout: T });
+    assert.equal(await text(c.page, '#predWord'), 'B');
+    await show(null); await c.page.waitForTimeout(900);
+    await show(hand('L'));
+    await c.page.waitForFunction(() => document.getElementById('out').value === 'BL', null, { timeout: T });
+    await show(null); await c.page.waitForTimeout(3300); // a long pause: the next letter starts a new word
+    await show(hand('Y'));
+    await c.page.waitForFunction(() => document.getElementById('out').value === 'BL Y', null, { timeout: T });
+    await c.page.waitForTimeout(3000);
+    assert.equal(await c.page.inputValue('#out'), 'BL Y', 'no full stop is added to letters');
+    await c.page.click('#stopBtn');
+    assert.deepEqual(c.errors, []);
+    await ctx.close();
+  });
+
+  await step('ISL model mode: meaning, confidence, unknown signs, no duplicates (stubbed ONNX runtime)', async () => {
     const ctx = await newContext(browser, port);
     const labels = { sequenceLength: 32, featureDim: 132, threshold: 0.7, labels: [{ gloss: 'HELLO', meaning: 'Hello' }, { gloss: 'THANK-YOU', meaning: 'Thank you' }, { gloss: 'YES', meaning: 'Yes' }] };
-    await ctx.route('**/models/asl/labels.json', (r) => r.fulfill({ contentType: 'application/json', body: JSON.stringify(labels) }));
-    await ctx.route('**/models/asl/metrics.json', (r) => r.fulfill({ contentType: 'application/json', body: JSON.stringify({ split: 'signer-disjoint', dataset: 'STUB (test only)', testClips: 50, testTop1: 0.9 }) }));
-    await ctx.route('**/models/asl/model.onnx', (r) => r.fulfill({ contentType: 'application/octet-stream', body: 'stub' }));
+    await ctx.route('**/models/isl/labels.json', (r) => r.fulfill({ contentType: 'application/json', body: JSON.stringify(labels) }));
+    await ctx.route('**/models/isl/metrics.json', (r) => r.fulfill({ contentType: 'application/json', body: JSON.stringify({ split: 'signer-disjoint', dataset: 'STUB (test only)', testClips: 50, testTop1: 0.9 }) }));
+    await ctx.route('**/models/isl/model.onnx', (r) => r.fulfill({ contentType: 'application/octet-stream', body: 'stub' }));
     await ctx.addInitScript(() => {
       window.__logits = [5, 0, 0];
       window.ort = { env: { wasm: {} }, Tensor: class { constructor(t, d, s) { this.data = d; this.dims = s; } },
         InferenceSession: { create: async () => ({ inputNames: ['input'], outputNames: ['logits'], run: async () => ({ logits: { data: window.__logits } }) }) } };
     });
     const c = await openPage(ctx, port, '/translate.html');
-    await c.page.click('[data-lang=asl]');
+    await c.page.click('[data-lang=isl]');
     await c.page.waitForFunction(() => document.getElementById('engineName').textContent.includes('3-sign model installed'), null, { timeout: T });
     assert.match(await text(c.page, '#engineMsg'), /top-1 90\.0%.*not used in training/);
     await c.page.click('#startBtn');
@@ -392,6 +452,7 @@ const remoteVideoPlaying = (page) => page.waitForFunction(
     assert.match(await c.page.inputValue('#out'), /^Hello\.?$/, 'unknown signs are never translated');
     await c.page.click('#stopBtn');
     assert.deepEqual(c.errors, []);
+    await ctx.close();
   });
 
   await step('mobile layout: no sideways scrolling, side panel opens and closes', async () => {
@@ -412,6 +473,32 @@ const remoteVideoPlaying = (page) => page.waitForFunction(
     assert.equal(await c.page.locator('#leaveModal.open').count(), 0);
     assert.equal(await c.page.locator('#quick .q').first().isVisible(), true, 'quick phrases visible on phones');
     for (const id of ['micB', 'camB', 'signB', 'leaveB']) assert.equal(await c.page.locator('#' + id).isVisible(), true, id);
+    assert.deepEqual(c.errors, []);
+    await ctx.close();
+  });
+
+  await step('landscape phone: the camera takes most of the screen and the controls stay on screen', async () => {
+    const ctx = await newContext(browser, port, { width: 844, height: 390 });
+    const c = await openPage(ctx, port);
+    await visible(c.page, '#auth'); await c.page.fill('#guestName', 'Wide'); await c.page.click('#guestBtn');
+    await visible(c.page, '#lobby'); await c.page.click('#createBtn'); await visible(c.page, '#app');
+    await c.page.waitForFunction(() => document.querySelectorAll('#grid .tile').length === 1);
+    const m = await c.page.evaluate(() => {
+      const r = (sel) => { const b = document.querySelector(sel).getBoundingClientRect(); return { x: b.x, y: b.y, w: b.width, h: b.height, r: b.right, b: b.bottom }; };
+      return { vw: innerWidth, vh: innerHeight, tile: r('.tile'), controls: r('.controls'), caps: r('.capwrap'), side: getComputedStyle(document.getElementById('side')).visibility, overflow: document.documentElement.scrollWidth > innerWidth };
+    });
+    await shot(c.page, '5-call-landscape');
+    assert.ok(m.tile.w >= m.vw * 0.6, `camera is ${Math.round(m.tile.w)}px wide of ${m.vw}`);
+    assert.ok(m.tile.h >= m.vh * 0.8, `camera is ${Math.round(m.tile.h)}px tall of ${m.vh}`);
+    assert.ok(m.controls.b <= m.vh + 1 && m.controls.r <= m.vw + 1, 'controls fit on screen');
+    assert.ok(m.controls.x >= m.tile.r - 1, 'controls sit beside the camera, not on top of it');
+    assert.equal(m.side, 'hidden', 'chat panel is a slide-in panel in landscape');
+    assert.equal(m.overflow, false);
+    await c.page.click('#sideBtn'); await visible(c.page, '#side');
+    await c.page.click('#signB'); await visible(c.page, '#tray');
+    const tray = await c.page.evaluate(() => { const b = document.getElementById('tray').getBoundingClientRect(); return { b: b.bottom, h: innerHeight }; });
+    assert.ok(tray.b <= tray.h + 1, 'sign tray stays on screen');
+    await shot(c.page, '6-call-landscape-signing');
     assert.deepEqual(c.errors, []);
     await ctx.close();
   });

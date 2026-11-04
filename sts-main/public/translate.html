@@ -84,6 +84,13 @@ textarea:focus{border-color:var(--ac);box-shadow:0 0 0 3px var(--ac-soft)}
 .modal p,.modal li{color:var(--tx2);font-size:13px;line-height:1.55}
 .modal ul{padding-left:18px;margin-bottom:14px}
 @media (max-width:860px){.wrap{grid-template-columns:1fr;padding:12px}}
+@media (orientation:landscape) and (max-height:720px){
+  .top{height:44px}
+  .wrap{max-width:none;padding:8px;gap:8px;grid-template-columns:minmax(0,1.6fr) minmax(0,1fr)}
+  .stage{aspect-ratio:auto;height:calc(100dvh - 44px - 120px);min-height:200px}
+  .stage video,.stage canvas{object-fit:contain}
+  textarea{min-height:90px;font-size:16px}
+}
 @media (prefers-reduced-motion:reduce){*{transition:none!important}}
 </style>
 </head>
@@ -114,8 +121,8 @@ textarea:focus{border-color:var(--ac);box-shadow:0 0 0 3px var(--ac-soft)}
       <div>
         <label id="langLbl">Sign language</label>
         <div class="seg" role="group" aria-labelledby="langLbl">
-          <button data-lang="isl" aria-pressed="true">ISL</button>
-          <button data-lang="asl" aria-pressed="false">ASL</button>
+          <button data-lang="isl" aria-pressed="false">ISL</button>
+          <button data-lang="asl" aria-pressed="true">ASL letters</button>
         </div>
       </div>
       <div>
@@ -147,7 +154,7 @@ textarea:focus{border-color:var(--ac);box-shadow:0 0 0 3px var(--ac-soft)}
 
   <section class="panel" aria-label="Translation">
     <div class="note" id="engineBox">
-      <b id="engineName">Starter gestures (demo)</b>
+      <b id="engineName">Checking for the ASL letters model...</b>
       <span id="engineMsg"></span>
     </div>
 

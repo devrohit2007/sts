@@ -1,6 +1,6 @@
 # Training the ASL sign model
 
-No trained model ships with STS. The app shows "demo gestures" until you add one. Follow these steps once.
+No trained WORD-level model ships with STS (only the pretrained ASL fingerspelling letters in `public/models/asl/`). Follow these steps to add word signs. Follow these steps once.
 
 ## 1. Pick data you are allowed to use (do this first)
 - **WLASL** is academic-use only and **ASL Citizen** is non-commercial research and forbids hosted services. Do not use them for the live site.
