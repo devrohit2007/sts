@@ -8,6 +8,7 @@ import { createCaptionView, createSpeechCaptioner, createVoice, clampSize, SIZES
 import { createSignDetector } from '../recognition/signDetector.js';
 import { STARTER, MODELS } from '../recognition/modelRegistry.js';
 import { findAslNowModel, loadAslNowModel } from '../recognition/modelRunner.js';
+import { CUSTOM_SHAPES } from '../recognition/handShapes.js';
 import { drawHands, clearHands } from '../vision/mediapipe.js';
 import { APP_VERSION } from '../version.js';
 
@@ -419,7 +420,7 @@ for (const t of PHRASES) {
 }
 
 // ---------- Sign detection ----------
-// Two engines: ASL fingerspelling letters (pretrained, see models/asl) and 7 generic demo gestures.
+// Two engines: ASL fingerspelling letters (pretrained, see models/asl) and generic demo hand gestures.
 const MAX_LETTERS = 20;      // the server accepts at most 20 characters per word
 const LETTER_FLUSH_MS = 4000; // pause between letters before the word is sent on its own
 const WORD_FLUSH_MS = 2200;
@@ -447,15 +448,15 @@ function paintSignMode() {
   const on = letters();
   $('signNote').textContent = on
     ? 'ASL fingerspelling: sign one letter at a time and hold it. J and Z need movement and are not recognised. Press Send after a word.'
-    : 'Demo gestures: 7 basic hand shapes, not real ISL or ASL.';
+    : 'Demo gestures: basic hand shapes, not real ISL or ASL.';
   $('guideTitle').textContent = on || $('signMode').value === 'asl' ? 'ASL letters' : 'Demo gestures';
   $('guideIntro').textContent = on || $('signMode').value === 'asl'
     ? 'Sign one fingerspelled letter at a time and hold it steady. Letters are joined into a word when you press Send. For a double letter (like LL), lower your hand between the two.'
-    : 'These are 7 generic hand shapes from a ready-made model. They are not real ISL or ASL signs. Hold one steady for about half a second.';
+    : 'These are generic hand shapes, not real ISL or ASL signs. Hold one steady for about half a second.';
   const rows = $('guideRows'); rows.replaceChildren();
   if ($('signMode').value === 'asl') {
     const row = el('div', 'row'); row.append(el('span', '', 'Letters recognised'), el('b', '', 'A-Y (not J, Z)')); rows.appendChild(row);
-  } else for (const [name, word] of Object.values(STARTER.labels)) {
+  } else for (const [name, word] of [...Object.values(STARTER.labels), ...Object.values(CUSTOM_SHAPES)]) {
     const r = el('div', 'row'); r.append(el('span', '', name), el('b', '', word)); rows.appendChild(r);
   }
 }

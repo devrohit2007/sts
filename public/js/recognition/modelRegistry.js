@@ -23,8 +23,8 @@ export const MODELS = {
   },
 };
 
-// Works today. These are 7 generic hand shapes from MediaPipe's gesture model,
-// mapped to words. They are NOT real ISL or ASL signs.
+// Works today. These are 7 generic hand shapes from MediaPipe's gesture model, mapped to words.
+// More shapes read from finger positions live in handShapes.js. None of them are real ISL or ASL signs.
 export const STARTER = {
   name: 'Starter gestures (demo)',
   status: 'demo',

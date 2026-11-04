@@ -77,3 +77,9 @@ test('vercel.json is valid JSON', () => {
   const v = JSON.parse(read(path.join(root, 'vercel.json')));
   assert.ok(Array.isArray(v.headers) && v.headers.length >= 1);
 });
+
+test('the version in package.json matches the version shown in the app', async () => {
+  const { pathToFileURL } = require('node:url');
+  const { APP_VERSION } = await import(pathToFileURL(path.join(pub, 'js/version.js')).href);
+  assert.equal(JSON.parse(read(path.join(root, 'package.json'))).version, APP_VERSION);
+});

@@ -31,6 +31,8 @@ const { publicConfig } = require('../../lib/config');
 
 const PUBLIC = path.join(__dirname, '../../public');
 const PROTOS = require('../fixtures/asl-prototypes.json'); // synthetic hands made from the model (plumbing test, not accuracy)
+const { makeHand, SHAPES } = require('../helpers/syntheticHand');
+const shape = (id, opts) => makeHand(SHAPES[id], opts); // synthetic hand with chosen finger positions
 const hand = (letter, flip = false) => PROTOS[letter].map(([x, y, z]) => ({ x: flip ? 1 - x : x, y, z }));
 const quiet = { log() {}, warn() {}, error: console.error };
 
@@ -273,9 +275,13 @@ const remoteVideoPlaying = (page) => page.waitForFunction(
     await A.page.evaluate(() => { window.__gesture = 'Thumb_Up'; });
     await A.page.waitForFunction(() => [...document.querySelectorAll('#chips .chip')].some((c) => c.textContent === 'good'), null, { timeout: T });
     await A.page.evaluate(() => { window.__gesture = null; });
+    // a custom finger-position shape (OK sign), read from the landmarks rather than by MediaPipe's gesture model
+    await A.page.evaluate((lm) => { window.__landmarks = lm; }, shape('ok'));
+    await A.page.waitForFunction(() => [...document.querySelectorAll('#chips .chip')].some((c) => c.textContent === 'okay'), null, { timeout: T });
+    await A.page.evaluate(() => { window.__landmarks = null; });
     await A.page.click('#sendWords');
-    await B.page.waitForFunction(() => [...document.querySelectorAll('#caps .cap p')].some((p) => p.textContent === 'AI:good'), null, { timeout: T });
-    assert.match(await text(B.page, '#transcript'), /AI:good/);
+    await B.page.waitForFunction(() => [...document.querySelectorAll('#caps .cap p')].some((p) => p.textContent === 'AI:good okay'), null, { timeout: T });
+    assert.match(await text(B.page, '#transcript'), /AI:good okay/);
     await A.page.click('#signB');
     await A.page.waitForSelector('#tray', { state: 'hidden', timeout: T });
   });
@@ -392,6 +398,9 @@ const remoteVideoPlaying = (page) => page.waitForFunction(
     await c.page.waitForFunction(() => document.getElementById('out').value.includes('Thank you'), null, { timeout: T });
     await c.page.evaluate(() => { window.__gesture = 'None'; });
     await c.page.waitForFunction(() => document.getElementById('predWord').textContent === 'Unknown sign', null, { timeout: T });
+    await c.page.evaluate((lm) => { window.__gesture = null; window.__landmarks = lm; }, shape('rock', { mirror: true })); // a left hand: Rock on
+    await c.page.waitForFunction(() => /cool/i.test(document.getElementById('out').value), null, { timeout: T });
+    await c.page.evaluate(() => { window.__landmarks = null; });
     await c.page.click('#stopBtn');
     assert.equal(await c.page.locator('#startBtn').isVisible(), true);
     assert.deepEqual(c.errors, []);

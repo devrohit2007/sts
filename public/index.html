@@ -338,8 +338,8 @@ a:hover{text-decoration:underline}
         <button class="btn p sm" id="sendWords" type="button">Send</button>
         <button class="btn sm" id="clearWords" type="button">Clear</button>
         <button class="btn sm" type="button" onclick="openModal('guideModal')">Sign guide</button>
-        <select class="sel" id="signMode" aria-label="Sign recognition mode"><option value="asl">ASL letters A-Z</option><option value="demo">Demo gestures (7)</option></select>
-        <p class="demo-note" id="signNote">Demo gestures: 7 basic hand shapes, not real ISL or ASL.</p>
+        <select class="sel" id="signMode" aria-label="Sign recognition mode"><option value="asl">ASL letters A-Z</option><option value="demo">Hand gestures (demo)</option></select>
+        <p class="demo-note" id="signNote">Demo gestures: basic hand shapes, not real ISL or ASL.</p>
       </div>
 
       <div class="quick" id="quick" role="group" aria-label="Quick phrases"></div>
@@ -383,7 +383,7 @@ a:hover{text-decoration:underline}
 
 <div class="ov" id="guideModal" role="dialog" aria-modal="true" aria-labelledby="guideTitle"><div class="modal">
   <h2 id="guideTitle">Sign guide</h2>
-  <p id="guideIntro">These are 7 generic hand shapes from a ready-made model. They are not real ISL or ASL signs. Hold one steady for about half a second.</p>
+  <p id="guideIntro">These are generic hand shapes, not real ISL or ASL signs. Hold one steady for about half a second.</p>
   <div id="guideRows"></div>
   <div class="acts" style="margin-top:16px"><button class="btn sm" type="button" onclick="closeModal('guideModal')">Close</button></div>
 </div></div>

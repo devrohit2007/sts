@@ -34,7 +34,7 @@ async function paintEngine() {
     chip('chipEngine', `${lang.toUpperCase()} model, ${n} signs`, true);
   } else {
     $('engineName').textContent = STARTER.name;
-    $('engineMsg').textContent = `No trained ${lang.toUpperCase()} model is installed. Demo mode recognises 7 basic hand shapes, not real ${lang.toUpperCase()} signs. ${m.note}`;
+    $('engineMsg').textContent = `No trained ${lang.toUpperCase()} model is installed. Demo mode recognises basic hand shapes, not real ${lang.toUpperCase()} signs. ${m.note}`;
     chip('chipEngine', 'Demo gestures only', 'warn');
   }
   $('kSign').textContent = f ? `Recognised ${lang.toUpperCase()} sign` : 'Detected hand shape';

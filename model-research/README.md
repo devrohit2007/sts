@@ -8,7 +8,7 @@ Rule: no invented weights, accuracy or vocabulary. Anything not verified is mark
 | Feature | Status |
 |---|---|
 | Camera, hand landmarks (MediaPipe) | Implemented |
-| Starter gestures (7 generic hand shapes) | Implemented, demo only, not real ISL/ASL |
+| Starter gestures (7 built-in + 9 finger-position shapes) | Implemented, demo only, not real ISL/ASL |
 | Model registry, uncertainty state, sentence builder | Implemented |
 | Trained ISL model | Planned (Milestone 4) |
 | ASL fingerspelling letters (ASLNow!, MIT) | Installed, runs in plain JS. Real-world accuracy not measured |

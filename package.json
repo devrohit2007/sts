@@ -1,6 +1,6 @@
 {
   "name": "sts",
-  "version": "1.1.0",
+  "version": "1.3.0",
   "private": true,
   "description": "STS - Sign To Speech. Video calls where sign language becomes live captions and voice.",
   "main": "server.js",
@@ -9,7 +9,9 @@
     "test": "node --test test/unit/*.test.js",
     "test:e2e": "node test/e2e/run.js"
   },
-  "engines": { "node": ">=20" },
+  "engines": {
+    "node": ">=20"
+  },
   "dependencies": {
     "express": "^4.21.2",
     "firebase-admin": "^12.7.0",

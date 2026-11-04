@@ -21,7 +21,7 @@ free hosting instance.
 
 -   Create and join communication rooms.
 -   Browser-based audio/video calls using WebRTC.
--   Gesture-recognition demo for a limited set of implemented gestures.
+-   ASL fingerspelling letters, plus 16 generic hand gestures (demo, not real sign language).
 -   Speech-to-text captions where supported by the browser.
 -   Text-to-speech using browser speech synthesis.
 -   Live text chat and quick phrases.
@@ -186,6 +186,7 @@ https://sts-server-w1ps.onrender.com/health
 1.  Import the same GitHub repository into Vercel.
 2.  Use the `Other` framework preset if no framework is detected.
 3.  Set the output directory to `public`.
+    When uploading to GitHub, upload the contents of the project folder (so `package.json` and `public/` are at the repo root), not the folder or a zip file.
 4.  Ensure the `sts-api` meta tag points to the Render backend.
 5.  Add the Vercel domain to Firebase Authentication → Settings →
     Authorized domains.
@@ -193,6 +194,35 @@ https://sts-server-w1ps.onrender.com/health
 
 If the frontend domain changes, update both Firebase Authorized domains
 and Render's `CORS_ORIGIN` allowlist.
+
+## Hand gestures (demo mode)
+
+Sixteen generic hand shapes turn into words. They are **not** real ISL or ASL signs. Hold one steady for about half a second.
+
+| Gesture | Word | Source |
+|---|---|---|
+| Open palm | hello | MediaPipe built-in |
+| Closed fist | yes | MediaPipe built-in |
+| Thumbs up | good | MediaPipe built-in |
+| Thumbs down | no | MediaPipe built-in |
+| Index finger up | wait | MediaPipe built-in |
+| Peace sign (V) | thank you | MediaPipe built-in |
+| Thumb, index and pinky out | I love you | MediaPipe built-in |
+| OK sign (thumb and index circle) | okay | finger positions |
+| Pinch (all fingertips together) | more | finger positions |
+| Call me (thumb and pinky out) | call me | finger positions |
+| Rock on (index and pinky up) | cool | finger positions |
+| Three fingers (index, middle, ring) | three | finger positions |
+| Four fingers (thumb tucked in) | four | finger positions |
+| L shape (thumb and index out) | look | finger positions |
+| Pinky up (other fingers closed) | bathroom | finger positions |
+| Index finger pointing sideways | there | finger positions |
+
+The nine "finger positions" shapes live in `public/js/recognition/handShapes.js`. Each one is a rule about which fingers are
+straight or bent, measured by joint angles, so it works for the left or right hand, a tilted hand and any camera shape.
+To add your own, add an entry to `CUSTOM_SHAPES` and a rule in `classifyShape`, then add a matching hand to
+`test/helpers/syntheticHand.js` and `test/unit/shapes.test.js`. The rules were tuned on geometry, not on a large set of real
+hands, so lighting and hand angle matter. Change words in `CUSTOM_SHAPES` (and `STARTER` in `modelRegistry.js`) if you prefer others.
 
 ## ASL Recognition
 
@@ -246,7 +276,7 @@ and Render's `CORS_ORIGIN` allowlist.
 STS is a hackathon prototype, not a certified accessibility or
 sign-language interpretation product.
 
--   Recognition covers ASL fingerspelling letters (A-Y) and 7 basic demo gestures.
+-   Recognition covers ASL fingerspelling letters (A-Y) and 16 basic demo gestures.
     Word-level ISL/ASL signs need a trained model (see ASL Recognition).
 -   Accuracy can vary with lighting, camera quality, hand position, and
     movement.
@@ -257,12 +287,25 @@ sign-language interpretation product.
 -   Do not rely on this prototype for emergency, medical, legal, or
     other high-stakes communication.
 
+## Running the Tests
+
+```bash
+npm test            # 90 unit tests: server, client logic, ASL letters, hand shapes, project checks
+npm run test:e2e    # 25 real-browser tests (needs: npm i -g playwright && npx playwright install chromium)
+```
+
+The browser test uses stand-ins for Socket.IO, Firebase, MediaPipe and the camera. It does not test real Google sign-in, Render or
+the NVIDIA service. Neither suite measures recognition accuracy on real hands.
+
 ## Project Structure
 
 -   `public/` --- frontend pages, styles, and browser-side JavaScript
 -   `lib/` --- server-side authentication, configuration, rooms, AI,
     validation, and event logic
 -   `server.js` --- Express and Socket.IO server entry point
+-   `public/models/asl/` --- pretrained ASL letters model (MIT)
+-   `training/`, `model-research/` --- notes and scripts for a future word-level model
+-   `vercel.json` --- security and cache headers for the Vercel frontend
 -   `test/` --- automated tests
 -   `package.json` --- Node.js dependencies and scripts
 

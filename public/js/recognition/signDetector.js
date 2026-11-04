@@ -4,14 +4,19 @@
 //   model - a trained sign model (see modelRunner.js), used only when one is installed.
 import { loadVision } from '../vision/mediapipe.js';
 import { STARTER } from './modelRegistry.js';
+import { classifyShape } from './handShapes.js';
 import { HoldTracker } from './holdTracker.js';
 import { frameFeatures } from './features.js';
 import { SignSegmenter } from './segmenter.js';
 import { decide, Cooldown, ProbSmoother } from './decision.js';
 
 // One MediaPipe result -> { state: 'nohand' | 'uncertain' | 'sign', word?, label?, score? }
-export function classify(result, starter = STARTER) {
+// Finger-position shapes (OK, call me, ...) are tried first; anything else falls back to MediaPipe's 7 built-in gestures.
+// dims = { width, height } of the video, so landmark angles are not squashed on a 16:9 camera.
+export function classify(result, starter = STARTER, dims) {
   if (!result?.landmarks?.length) return { state: 'nohand' };
+  const shape = classifyShape(result.landmarks[0], dims);
+  if (shape) return { state: 'sign', label: shape.label, word: shape.word, score: shape.score };
   const g = result.gestures?.[0]?.[0];
   const entry = g ? starter.labels[g.categoryName] : null;
   if (!entry || g.score < starter.threshold) return { state: 'uncertain', score: g?.score ?? 0 };
@@ -70,7 +75,7 @@ export function createSignDetector({ getVideo, getModel = () => null, onFrame, o
       return;
     }
     if (model) return modelFrame(model, result);
-    const p = classify(result);
+    const p = classify(result, STARTER, { width: video.videoWidth, height: video.videoHeight });
     onPrediction?.(p);
     if (p.state === 'sign') { const w = tracker.sign(p.word); if (w) onWord?.(w, p); }
     else tracker.miss(p.state === 'nohand');
